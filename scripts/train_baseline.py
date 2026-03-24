@@ -22,6 +22,7 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 from sklearn.utils.class_weight import compute_class_weight
+from tensorflow.keras.losses import BinaryFocalCrossentropy
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -99,6 +100,18 @@ def parse_args() -> argparse.Namespace:
         default=42,
         help="Random seed for reproducibility.",
     )
+    parser.add_argument(
+        "--loss",
+        default="binary_crossentropy",
+        choices=["binary_crossentropy", "focal"],
+        help="Loss function: 'binary_crossentropy' (default) or 'focal'.",
+    )
+    parser.add_argument(
+        "--focal_gamma",
+        type=float,
+        default=2.0,
+        help="Focusing parameter gamma for focal loss (ignored for BCE).",
+    )
     return parser.parse_args()
 
 
@@ -131,6 +144,13 @@ def parse_phase_boundary(value: str) -> tuple[int, int]:
             f"Both phase_boundary values must be > 0, got {n_trainable}, {n_frozen}"
         )
     return n_trainable, n_frozen
+
+
+def get_loss(args: argparse.Namespace):
+    """Return the loss function based on CLI args."""
+    if args.loss == "focal":
+        return BinaryFocalCrossentropy(gamma=args.focal_gamma, from_logits=False)
+    return "binary_crossentropy"
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +299,7 @@ def main() -> None:
     args = parse_args()
     n_trainable, n_frozen = parse_phase_boundary(args.phase_boundary)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    loss_label = "focal" if args.loss == "focal" else "bce"
 
     # -- Environment --------------------------------------------------------
     print_runtime_env()
@@ -335,9 +356,9 @@ def main() -> None:
 
     # -- Phase 1 ------------------------------------------------------------
     phase1_ckpt = os.path.join(
-        args.output_dir, f"{args.arch}_phase1_{timestamp}.keras"
+        args.output_dir, f"{args.arch}_{loss_label}_phase1_{timestamp}.keras"
     )
-    phase1_log = os.path.join(log_dir, f"{args.arch}_baseline_phase1_{timestamp}.csv")
+    phase1_log = os.path.join(log_dir, f"{args.arch}_baseline_{loss_label}_phase1_{timestamp}.csv")
 
     print(f"\n{'='*60}")
     print(f"Phase 1: last {n_trainable} backbone layers trainable, LR={PHASE1_LR}")
@@ -347,7 +368,7 @@ def main() -> None:
 
     model.compile(
         optimizer=Adam(learning_rate=PHASE1_LR),
-        loss="binary_crossentropy",
+        loss=get_loss(args),
         metrics=[
             "accuracy",
             Precision(name="precision"),
@@ -374,9 +395,9 @@ def main() -> None:
 
     # -- Phase 2 ------------------------------------------------------------
     phase2_ckpt = os.path.join(
-        args.output_dir, f"{args.arch}_phase2_{timestamp}.keras"
+        args.output_dir, f"{args.arch}_{loss_label}_phase2_{timestamp}.keras"
     )
-    phase2_log = os.path.join(log_dir, f"{args.arch}_baseline_phase2_{timestamp}.csv")
+    phase2_log = os.path.join(log_dir, f"{args.arch}_baseline_{loss_label}_phase2_{timestamp}.csv")
 
     print(f"\n{'='*60}")
     print(f"Phase 2: freeze first {n_frozen} backbone layers, LR={PHASE2_LR}")
@@ -388,7 +409,7 @@ def main() -> None:
 
     model.compile(
         optimizer=Adam(learning_rate=PHASE2_LR),
-        loss="binary_crossentropy",
+        loss=get_loss(args),
         metrics=[
             "accuracy",
             Precision(name="precision"),
@@ -418,7 +439,7 @@ def main() -> None:
 
     # -- Save final model ---------------------------------------------------
     final_path = os.path.join(
-        args.output_dir, f"{args.arch}_baseline_{timestamp}.keras"
+        args.output_dir, f"{args.arch}_baseline_{loss_label}_{timestamp}.keras"
     )
     model.save(final_path)
     print(f"\nFinal model saved: {final_path}")

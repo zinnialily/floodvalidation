@@ -8,6 +8,7 @@ Supports three modes:
   - percentile (default): mine top-N% by flood probability from candidate list
   - sweep: ablation over multiple tau thresholds, pick best on val metrics
   - --no_injection: extended-training control (same epoch budget, no HNM)
+  - --random_injection: random-injection control (same count as HNM, random selection from candidate pool)
 
 Compute: Colab T4 GPU (or any CUDA-capable GPU).
 Estimated runtime: ~1-3 hours depending on mode and architecture.
@@ -45,6 +46,7 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import average_precision_score
 from sklearn.utils.class_weight import compute_class_weight
+from tensorflow.keras.losses import BinaryFocalCrossentropy
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import (
@@ -157,6 +159,26 @@ def parse_args() -> argparse.Namespace:
         default=42,
         help="Random seed for reproducibility.",
     )
+    parser.add_argument(
+        "--loss",
+        default="binary_crossentropy",
+        choices=["binary_crossentropy", "focal"],
+        help="Loss function: 'binary_crossentropy' (default) or 'focal'.",
+    )
+    parser.add_argument(
+        "--focal_gamma",
+        type=float,
+        default=2.0,
+        help="Focusing parameter gamma for focal loss (ignored for BCE).",
+    )
+    parser.add_argument(
+        "--random_injection",
+        action="store_true",
+        help=(
+            "Random-injection control: inject same number of randomly-sampled "
+            "candidates as HNM would mine, without probability-based ranking."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -188,6 +210,13 @@ def parse_phase_boundary(value: str) -> Tuple[int, int]:
             f"Both phase_boundary values must be > 0, got {n_trainable}, {n_frozen}"
         )
     return n_trainable, n_frozen
+
+
+def get_loss(args: argparse.Namespace):
+    """Return the loss function based on CLI args."""
+    if args.loss == "focal":
+        return BinaryFocalCrossentropy(gamma=args.focal_gamma, from_logits=False)
+    return "binary_crossentropy"
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +254,7 @@ def _collect_basenames_recursive(directory: str) -> set:
         Set of basename strings.
     """
     basenames = set()
-    for root, _dirs, files in os.walk(directory):
+    for _root, _dirs, files in os.walk(directory):
         for f in files:
             if Path(f).suffix.lower() in VALID_IMAGE_EXTENSIONS:
                 basenames.add(f)
@@ -578,6 +607,7 @@ def train_hnm_phases(
     arch: str,
     label: str,
     timestamp: str,
+    loss_fn=None,
 ) -> tf.keras.Model:
     """Run HNM Phase 1 and Phase 2 training.
 
@@ -594,10 +624,14 @@ def train_hnm_phases(
         arch: Architecture name.
         label: Descriptive label for file naming (e.g. 'hnm_percentile').
         timestamp: Timestamp string for filenames.
+        loss_fn: Loss function (string or object). Defaults to binary_crossentropy.
 
     Returns:
         The trained model (with best weights restored by EarlyStopping).
     """
+    if loss_fn is None:
+        loss_fn = "binary_crossentropy"
+
     # -- HNM Phase 1 -------------------------------------------------------
     freeze_for_phase1(base_model, n_trainable=n_trainable)
 
@@ -612,7 +646,7 @@ def train_hnm_phases(
 
     model.compile(
         optimizer=Adam(learning_rate=HNM_PHASE1_LR),
-        loss="binary_crossentropy",
+        loss=loss_fn,
         metrics=[
             "accuracy",
             Precision(name="precision"),
@@ -653,7 +687,7 @@ def train_hnm_phases(
 
     model.compile(
         optimizer=Adam(learning_rate=HNM_PHASE2_LR),
-        loss="binary_crossentropy",
+        loss=loss_fn,
         metrics=[
             "accuracy",
             Precision(name="precision"),
@@ -870,6 +904,7 @@ def run_percentile_mode(
         arch=args.arch,
         label="hnm_percentile",
         timestamp=timestamp,
+        loss_fn=get_loss(args),
     )
 
     # 11. Save final model.
@@ -1095,11 +1130,106 @@ def run_sweep_mode(
         arch=args.arch,
         label="hnm_sweep",
         timestamp=timestamp,
+        loss_fn=get_loss(args),
     )
 
     final_path = os.path.join(output_dir, f"{args.arch}_hnm_sweep_{timestamp}.keras")
     model.save(final_path)
     print(f"\n[DONE] HNM sweep model saved: {final_path}")
+
+
+# ---------------------------------------------------------------------------
+# Mode: --random_injection (random-injection control)
+# ---------------------------------------------------------------------------
+
+
+def run_random_injection_mode(
+    args: argparse.Namespace,
+    n_trainable: int,
+    n_frozen: int,
+    timestamp: str,
+) -> None:
+    """Random-injection control: same count as HNM, random selection from candidates.
+
+    Isolates whether the *hard-negative* nature of injected images drives
+    improvement, versus simply adding more non_flood training data.
+    """
+    data_dir = os.path.abspath(args.data_dir)
+    output_dir = os.path.abspath(args.output_dir)
+    results_dir = os.path.join("results", "tables")
+    log_dir = os.path.join("results", "logs")
+
+    binary_dir = os.path.join(data_dir, "processed_data", "binary")
+    train_dir = os.path.join(binary_dir, "train")
+    val_dir = os.path.join(binary_dir, "val")
+    test_dir = os.path.join(binary_dir, "test")
+
+    hnm_dir = os.path.join(data_dir, "processed_data", "binary_random_inject")
+    hnm_train_dir = os.path.join(hnm_dir, "train")
+    hnm_augmented_dir = os.path.join(hnm_dir, "augmented_random_negatives")
+
+    # 1. Read the same candidate list used by HNM.
+    candidate_paths = read_mining_candidates(results_dir, args.arch)
+
+    # Partition safety.
+    mining_basenames = {os.path.basename(p) for p in candidate_paths}
+    verify_partition_safety(mining_basenames, val_dir, test_dir, hnm_augmented_dir)
+
+    # 2. Determine how many HNM would select (same top_pct logic).
+    n_hard = max(1, int(args.top_pct * len(candidate_paths)))
+
+    # 3. Randomly sample n_hard images — NO flood-probability ranking.
+    rng = np.random.RandomState(seed=args.seed)
+    random_indices = rng.choice(len(candidate_paths), size=n_hard, replace=False)
+    random_paths = [candidate_paths[i] for i in random_indices]
+
+    print(f"\n[INFO] Random injection: selected {len(random_paths)} images "
+          f"(same count as HNM top {args.top_pct*100:.0f}%, random from candidate pool)")
+
+    # 4. Augment with identical transforms as HNM.
+    augmented_paths = augment_hard_negatives(
+        random_paths, hnm_augmented_dir, args.arch
+    )
+
+    # 5. Build injection training directory.
+    build_hnm_training_dir(train_dir, hnm_train_dir, augmented_paths)
+
+    # 6. Build generators.
+    train_gen, val_gen = build_generators(hnm_train_dir, val_dir, args.arch, args.seed)
+    print(f"Random-inject train samples: {train_gen.samples} | Val: {val_gen.samples}")
+    verify_preprocessing(train_gen, args.arch)
+
+    class_weight_dict = compute_class_weights(train_gen)
+
+    # 7. Reload model from baseline checkpoint.
+    print(f"\n[INFO] Loading baseline model from: {args.model_path}")
+    model = tf.keras.models.load_model(args.model_path)
+    base_model = model.layers[1]
+
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+
+    model = train_hnm_phases(
+        model=model,
+        base_model=base_model,
+        train_gen=train_gen,
+        val_gen=val_gen,
+        class_weight_dict=class_weight_dict,
+        n_trainable=n_trainable,
+        n_frozen=n_frozen,
+        output_dir=output_dir,
+        log_dir=log_dir,
+        arch=args.arch,
+        label="random_inject",
+        timestamp=timestamp,
+        loss_fn=get_loss(args),
+    )
+
+    final_path = os.path.join(
+        output_dir, f"{args.arch}_random_inject_{timestamp}.keras"
+    )
+    model.save(final_path)
+    print(f"\n[DONE] Random-injection control complete. Model saved: {final_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -1160,6 +1290,7 @@ def run_no_injection_mode(
         arch=args.arch,
         label="extended_baseline",
         timestamp=timestamp,
+        loss_fn=get_loss(args),
     )
 
     final_path = os.path.join(output_dir, f"{args.arch}_extended_baseline_{timestamp}.keras")
@@ -1201,7 +1332,13 @@ def main() -> None:
             )
 
     # Dispatch.
-    if args.no_injection:
+    if args.random_injection:
+        print(f"\n{'='*60}")
+        print("Mode: Random-injection control")
+        print(f"{'='*60}")
+        run_random_injection_mode(args, n_trainable, n_frozen, timestamp)
+
+    elif args.no_injection:
         print(f"\n{'='*60}")
         print("Mode: Extended-training control (no HNM injection)")
         print(f"Total epoch budget: {TOTAL_HNM_BUDGET}")

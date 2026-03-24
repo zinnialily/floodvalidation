@@ -46,18 +46,36 @@ end
 
 CA3 --> H1 --> H2 --> H3 --> H4
 
-%% ── RETRAIN CONFIGURATIONS ────────────────────────────────────────────────
-subgraph CONFIGS["④ Retrain configurations"]
-    C_HNM["HNM retrain\nPhase 1: LR = 5e-5 · max 15 epochs\nPhase 2: LR = 1e-5 · max 10 epochs\n× EfficientNetB0  ×  ResNet50"]
-    C_CTRL["Extended-training control  (--no_injection)\nSame total epoch budget · no HNM injected\n← critical ablation: isolates HNM contribution from extra training"]
+%% ── BASELINE LOSS CONDITIONS ──────────────────────────────────────────────
+subgraph BLOSS["③b Loss function conditions  —  train_baseline.py  ×2 archs  ×5 seeds"]
+    BL_BCE["--loss binary_crossentropy  (default)"]
+    BL_FOC["--loss focal  γ=2.0\n← tests whether focal loss alone rejects confounders"]
 end
 
-H4    --> C_HNM
-B_M0  --> C_CTRL
-SP_TR --> C_HNM
-SP_VA --> C_HNM
-SP_TR --> C_CTRL
-SP_VA --> C_CTRL
+B_M0 --> BL_BCE
+B_M0 --> BL_FOC
+
+%% ── RETRAIN CONFIGURATIONS ────────────────────────────────────────────────
+subgraph CONFIGS["④ Retrain configurations  (×2 archs · ×5 seeds · ×2 loss functions)"]
+    C_HNM_BCE["HNM retrain — binary_crossentropy\ntrain_hnm.py  Phase 1: LR=5e-5 · max 15 ep\nPhase 2: LR=1e-5 · max 10 ep"]
+    C_HNM_FOC["HNM retrain — focal loss  γ=2.0\ntrain_hnm.py --loss focal\n← 2×2 factorial: HNM × loss function"]
+    C_NOINJ["Extended-training control  --no_injection\nSame epoch budget · no injection\n← isolates HNM benefit from extra training time"]
+    C_RAND["Random-injection control  --random_injection\nSame count as HNM · random candidate selection\n← isolates hard-negative ranking from data size effect"]
+end
+
+H4    --> C_HNM_BCE
+H4    --> C_HNM_FOC
+B_M0  --> C_NOINJ
+B_M0  --> C_RAND
+CA3   --> C_RAND
+SP_TR --> C_HNM_BCE
+SP_VA --> C_HNM_BCE
+SP_TR --> C_HNM_FOC
+SP_VA --> C_HNM_FOC
+SP_TR --> C_NOINJ
+SP_VA --> C_NOINJ
+SP_TR --> C_RAND
+SP_VA --> C_RAND
 
 %% ── THRESHOLD SELECTION ───────────────────────────────────────────────────
 subgraph THRESH["⑤ Threshold selection  (val set only — never test)"]
@@ -65,9 +83,12 @@ subgraph THRESH["⑤ Threshold selection  (val set only — never test)"]
     TH2["Select: max flood recall  s.t.  0% pool FP on val"]
 end
 
-B_M0   --> TH1
-C_HNM  --> TH1
-C_CTRL --> TH1
+BL_BCE     --> TH1
+BL_FOC     --> TH1
+C_HNM_BCE  --> TH1
+C_HNM_FOC  --> TH1
+C_NOINJ    --> TH1
+C_RAND     --> TH1
 TH1 --> TH2
 
 %% ── EVALUATION ────────────────────────────────────────────────────────────
@@ -75,12 +96,22 @@ subgraph EVAL["⑥ Final evaluation  —  evaluate.py  (test set · 564 images �
     EV_DET["Flood detection\nPR-AUC (primary) · Recall · Precision · F1 · ROC-AUC · Accuracy"]
     EV_SEV["Severity-stratified recall\nMajor · Moderate · Minor flood"]
     EV_FP["Confounder rejection\nPer-category FP rates · Pool FP + Clopper-Pearson 95% CI\nFisher exact test (pre vs post HNM)"]
-    EV_STAT["Statistical validation\n5-seed mean ± std · Bootstrap 95% CIs · McNemar test"]
 end
 
 TH2   --> EV_DET
 SP_TE --> EV_DET
 EV_DET --> EV_SEV
 EV_DET --> EV_FP
-EV_SEV --> EV_STAT
-EV_FP  --> EV_STAT
+
+%% ── SEED AGGREGATION ──────────────────────────────────────────────────────
+subgraph AGGREGATE["⑦ Seed aggregation  —  aggregate_seeds.py"]
+    AG1["Load per-seed predictions CSVs\n(×5 seeds × 6 conditions × 2 archs)"]
+    AG2["Compute mean ± std across seeds\nPR-AUC · Recall · F1 · Pool FP rate"]
+    AG3["McNemar pairwise tests\n(Bonferroni-corrected)"]
+    AG4(["Unified comparison table\nresults/tables/seed_aggregation_{arch}.csv"])
+end
+
+EV_DET  --> AG1
+EV_SEV  --> AG1
+EV_FP   --> AG1
+AG1 --> AG2 --> AG3 --> AG4

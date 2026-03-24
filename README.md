@@ -61,13 +61,15 @@ Most flood detection papers report single-run results on test sets of 500–600 
 
 3. **Systematic confounder FP analysis.** False positive rates on each non-flood category (swimming pool, wet road, animals, vehicles, buildings) are reported separately with Clopper-Pearson binomial CIs. The swimming pool result of 0/15 carries a 95% CI of approximately [0%, 21.8%] — reported honestly, not as "complete elimination."
 
-4. **Extended-training-without-HNM ablation.** The HNM retraining effectively doubles the training budget. An explicit control (same total epochs, no injection) isolates the HNM contribution from the benefit of additional training time. This is the single most important ablation in the pipeline.
+4. **Three-way ablation design.** Two controls isolate exactly what drives performance: (a) `--no_injection` matches the epoch budget but injects nothing — isolates HNM from extra training time; (b) `--random_injection` injects the same number of non-flood images selected randomly (not by flood probability) from the same candidate pool — isolates the hard-negative ranking from a simple data-augmentation effect. Together these are the two most critical ablations in the pipeline.
 
-5. **PR-AUC as primary metric.** ROC-AUC is known to be misleadingly optimistic under class imbalance (Davis & Goadrich, 2006). PR-AUC directly captures the precision-recall tradeoff that matters for screening: high recall subject to a manageable false positive rate.
+5. **Focal loss as a complementary comparison.** Focal loss (Lin et al., 2017) addresses the same gradient-imbalance problem as HNM via a different mechanism. A full 2×2 factorial design (`{BCE, Focal} × {no HNM, HNM}`) evaluates whether the approaches are complementary or redundant, directly answering the primary reviewer objection against HNM.
 
-6. **Statistically rigorous evaluation.** Multi-seed runs (seeds 42, 123, 256, 512, 1024) with bootstrap CIs and McNemar's test for pairwise model comparisons. Fisher's exact test for swimming pool FP rate comparisons.
+6. **PR-AUC as primary metric.** ROC-AUC is known to be misleadingly optimistic under class imbalance (Davis & Goadrich, 2006). PR-AUC directly captures the precision-recall tradeoff that matters for screening: high recall subject to a manageable false positive rate.
 
-7. **Severity-stratified recall.** The dataset preserves flood severity labels (MajorFlood, ModerateFlood, MinorFlood). Recall broken down by severity identifies which flood presentations the model misses most, which has direct operational implications for emergency response triage.
+7. **Statistically rigorous evaluation.** Multi-seed runs (seeds 42, 123, 256, 512, 1024) with bootstrap CIs and McNemar's test for pairwise model comparisons. Fisher's exact test for swimming pool FP rate comparisons.
+
+8. **Severity-stratified recall.** The dataset preserves flood severity labels (MajorFlood, ModerateFlood, MinorFlood). Recall broken down by severity identifies which flood presentations the model misses most, which has direct operational implications for emergency response triage.
 
 ---
 
@@ -105,9 +107,33 @@ EarlyStopping (patience = 7) and ReduceLROnPlateau (factor = 0.5, patience = 3, 
 5. **Retrain**: Phase 1 (LR = 5e-5, 15 epochs), Phase 2 (LR = 1e-5, 10 epochs) on the augmented set. Validation monitored on the original unmodified val partition.
 6. **Partition integrity assertion**: halts training if any filename overlap between train augmentations and val/test is detected.
 
-### Extended-Training Control
+### Loss Function
 
-`train_hnm.py --no_injection` runs the same epoch budget as the HNM model (Phase 1 + Phase 2 + HNM Phase 1 + HNM Phase 2) without injecting any hard negatives. This isolates the HNM contribution from the benefit of additional training epochs.
+Both `train_baseline.py` and `train_hnm.py` accept `--loss` and `--focal_gamma`:
+
+```bash
+# Binary cross-entropy (default)
+python scripts/train_baseline.py --arch efficientnet --loss binary_crossentropy
+
+# Focal loss γ=2.0 (Lin et al., 2017)
+python scripts/train_baseline.py --arch efficientnet --loss focal --focal_gamma 2.0
+```
+
+The 2×2 factorial design (`{BCE, Focal} × {no HNM, HNM}`) produces four baseline conditions per architecture.
+
+### Ablation Controls
+
+**Extended-training control** (`--no_injection`): same total epoch budget as HNM, no injection. Isolates HNM from extra training time.
+
+**Random-injection control** (`--random_injection`): injects the same number of non-flood images as HNM would mine, selected randomly (not by flood probability) from the same candidate pool. Isolates the hard-negative ranking from a simple data-size effect.
+
+```bash
+# Extended-training control
+python scripts/train_hnm.py --arch efficientnet --model_path models/... --no_injection
+
+# Random-injection control
+python scripts/train_hnm.py --arch efficientnet --model_path models/... --random_injection
+```
 
 ### Preprocessing
 
@@ -123,13 +149,15 @@ Thresholds are swept from 0.05 to 0.95 on the **validation set** to find the ope
 
 ### Ablations
 
-| Ablation | Purpose |
-|----------|---------|
-| Extended training without HNM (`--no_injection`) | Isolates HNM contribution from extra training epochs — **run first** |
-| Tau sweep (0.2, 0.3, 0.4, 0.5) | Select optimal mining threshold on validation |
-| Augmentation factor (2×, 5×, 10×) | Sensitivity to augmentation multiplier |
-| Phase 1 only / Phase 2 only / both | Contribution of each training phase |
-| With/without class weights | Effect of class rebalancing |
+| Ablation | Script flag | Purpose |
+|----------|-------------|---------|
+| Extended training without HNM | `--no_injection` | Isolates HNM from extra training epochs |
+| Random injection (same count, random selection) | `--random_injection` | Isolates hard-negative ranking from data-size effect |
+| Focal loss baseline | `--loss focal` | Tests whether loss-level reweighting alone is sufficient |
+| 2×2 factorial: HNM × loss function | `--loss focal` on both scripts | Tests complementarity of HNM and focal loss |
+| Tau sweep (0.2, 0.3, 0.4, 0.5) | `--tau_mode sweep` | Select optimal mining threshold on validation |
+| Augmentation factor (2×, 5×, 10×) | `--aug_factor` | Sensitivity to augmentation multiplier |
+| Phase boundary | `--phase_boundary` | Contribution of freeze/unfreeze boundaries |
 
 ### Statistical Validation
 
@@ -198,26 +226,52 @@ Splits are stratified by `multiclass_label × is_swimming_pool` (seed 42). Hard 
 |------|----------|--------|---------|
 | 1. Data exploration | `01_data_exploration.ipynb` | — | CPU |
 | 2. Stratified splitting | `02_stratified_splitting.ipynb` | — | CPU |
-| 3. Baseline EfficientNetB0 | `03_baseline_efficientnetb0.ipynb` | `train_baseline.py --arch efficientnet` | T4 GPU |
-| 4. Baseline ResNet50 | `04_baseline_resnet50.ipynb` | `train_baseline.py --arch resnet50` | T4 GPU |
+| 3a. Baseline EfficientNetB0 (BCE) | `03_baseline_efficientnetb0.ipynb` | `train_baseline.py --arch efficientnet --loss binary_crossentropy` | T4 GPU |
+| 3b. Baseline EfficientNetB0 (Focal) | — | `train_baseline.py --arch efficientnet --loss focal` | T4 GPU |
+| 4a. Baseline ResNet50 (BCE) | `04_baseline_resnet50.ipynb` | `train_baseline.py --arch resnet50 --loss binary_crossentropy` | T4 GPU |
+| 4b. Baseline ResNet50 (Focal) | — | `train_baseline.py --arch resnet50 --loss focal` | T4 GPU |
 | 5a. Confounder analysis | `05a_confounder_analysis.ipynb` | `analyze_confounders.py` | T4 GPU |
-| 5b. HNM — EfficientNetB0 | `05b_hnm_efficientnetb0.ipynb` | `train_hnm.py --arch efficientnet` | T4 GPU |
-| 5c. HNM — ResNet50 | `05c_hnm_resnet50.ipynb` | `train_hnm.py --arch resnet50` | T4 GPU |
+| 5b. HNM — EfficientNetB0 (BCE) | `05b_hnm_efficientnetb0.ipynb` | `train_hnm.py --arch efficientnet` | T4 GPU |
+| 5c. HNM — EfficientNetB0 (Focal) | — | `train_hnm.py --arch efficientnet --loss focal` | T4 GPU |
+| 5d. HNM — ResNet50 (BCE) | `05c_hnm_resnet50.ipynb` | `train_hnm.py --arch resnet50` | T4 GPU |
+| 5e. HNM — ResNet50 (Focal) | — | `train_hnm.py --arch resnet50 --loss focal` | T4 GPU |
+| 5f. Extended-training control | — | `train_hnm.py --arch efficientnet --no_injection` | T4 GPU |
+| 5g. Random-injection control | — | `train_hnm.py --arch efficientnet --random_injection` | T4 GPU |
 | 6. Evaluation | `06_evaluation.ipynb` | `evaluate.py` | CPU/GPU |
+| 7. Seed aggregation | — | `aggregate_seeds.py` | CPU |
 
-**Execution order:** `03 → 04 → 05a → 05b → 05c → 06`
+**Execution order:** `03a/3b → 04a/4b → 05a → 05b–5g → 06 → 07`
 
 After step 05a, copy the printed checkpoint path into `MODEL_PATH` in the HNM notebooks before running.
+
+### Seed Aggregation
+
+After all evaluation CSVs are produced, aggregate across seeds:
+
+```bash
+python scripts/aggregate_seeds.py \
+  --baseline_bce   "results/predictions/efficientnet_baseline_bce_seed*.csv" \
+  --baseline_focal "results/predictions/efficientnet_baseline_focal_seed*.csv" \
+  --hnm_bce        "results/predictions/efficientnet_hnm_bce_seed*.csv" \
+  --hnm_focal      "results/predictions/efficientnet_hnm_focal_seed*.csv" \
+  --no_injection   "results/predictions/efficientnet_no_injection_seed*.csv" \
+  --random_inject  "results/predictions/efficientnet_random_inject_seed*.csv" \
+  --arch           efficientnet \
+  --output         results/tables/seed_aggregation_efficientnet.csv
+```
+
+Outputs a unified CSV with mean ± std for PR-AUC, Recall, F1, and pool FP rate across all conditions, plus Bonferroni-corrected McNemar p-values vs. the baseline BCE condition.
 
 ---
 
 ## Ideal Results
 
-The best-case outcome demonstrates three things:
+The best-case outcome demonstrates four things:
 
-1. **HNM beats the extended-training control.** If the `--no_injection` ablation achieves similar accuracy to HNM, the improvement is attributable to training budget, not mining. If HNM exceeds it — particularly on pool FP rate and minority-flood recall — the contribution is established.
-2. **Cross-seed consistency.** Hard negatives identified by different random seeds substantially overlap, suggesting the mining step targets a stable region of the decision boundary rather than reflecting initialisation noise.
-3. **PR-AUC ≥ 0.97 with ≥ 95% recall and ≤ 5% pool FP rate**, with 95% CIs that do not overlap the baseline. This would support the claim of a confounder-robust first-pass screening system.
+1. **HNM beats both controls.** `--no_injection` (epoch-matched) and `--random_injection` (data-size-matched) both fall short of HNM — establishing that the benefit comes specifically from the hard-negative nature of the injected images, not from extra training time or more non-flood data.
+2. **Focal loss and HNM are complementary.** In the 2×2 factorial, HNM+Focal outperforms HNM+BCE and Focal alone — showing the two mechanisms target different aspects of the confounder problem.
+3. **Cross-seed consistency.** Hard negatives identified by different random seeds substantially overlap, suggesting the mining step targets a stable region of the decision boundary rather than reflecting initialisation noise.
+4. **PR-AUC ≥ 0.97 with ≥ 95% recall and ≤ 5% pool FP rate**, with 95% CIs that do not overlap the baseline. This would support the claim of a confounder-robust first-pass screening system.
 
 ---
 
@@ -278,11 +332,12 @@ imagevalidation2/
   notebooks/          Colab-ready .ipynb wrappers (one per pipeline step)
   scripts/
     utils.py               # seeding, model building, preprocessing, callbacks
-    train_baseline.py      # two-phase progressive fine-tuning
+    train_baseline.py      # two-phase fine-tuning; --loss {bce,focal}
     analyze_confounders.py # rank train/non_flood categories by FP rate
-    train_hnm.py           # HNM mining, augmentation injection, retraining
+    train_hnm.py           # HNM, --no_injection, --random_injection, --loss {bce,focal}
     evaluate.py            # PR-AUC primary, bootstrap CI, McNemar, severity recall
     grad_cam.py            # GradCAM++ heatmaps for FN/FP/pool/correct sets
+    aggregate_seeds.py     # unified multi-seed comparison table + McNemar tests
   results/
     figures/          PR curves, confusion matrices, GradCAM grids, reliability diagrams
     tables/           Metric CSVs, confounder FP rates, tau sweep results
