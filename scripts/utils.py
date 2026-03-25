@@ -247,7 +247,7 @@ def build_model(
     freeze_for_phase1(base_model, n_trainable=phase_boundary[0])
 
     # Build the classification head.
-    x = base_model(inputs, training=False)
+    x = base_model(inputs, training=True)
     x = GlobalAveragePooling2D(name="gap")(x)
     x = Dropout(0.2, name="dropout_1")(x)
     x = Dense(256, activation="relu", name="dense_256")(x)

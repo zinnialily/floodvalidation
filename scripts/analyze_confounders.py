@@ -54,6 +54,7 @@ KNOWN_JUNK_PREFIXES: List[str] = [
     "Cats", "Deers", "Dogs", "Motorcycle", "Plants", "Swimmingpool",
     "building_exterior", "building_interior", "bus", "car",
     "house_exterior", "Racoon", "NoFlood", "parks_walkways",
+    "River", "Lake", "Fountain",   # new external confounder categories
 ]
 
 

@@ -39,9 +39,9 @@ Target journal: *Computers & Geosciences* (Elsevier, ISSN 0098-3004).
 
 ### The visual confounder problem
 
-A largely underexplored failure mode in flood binary classification is the **false positive from visually confusing non-flood categories**. Swimming pools share three properties with flooded streets: an open reflective water surface at approximately ground level, proximity to urban infrastructure, and similar colour statistics under overcast conditions. Wet roads and reflective pavement produce specular reflections that can mimic standing water, particularly at night (Schumann et al., 2023). Rain-obscured images introduce surface water appearances on streets, windows, and lenses. None of these confounders are systematically represented in existing flood detection datasets, and none of the reviewed papers explicitly report false positive rates on confounding categories separately from aggregate precision.
+A largely underexplored failure mode in flood binary classification is the **false positive from visually confusing non-flood categories**. Swimming pools share three properties with flooded streets: an open reflective water surface at approximately ground level, proximity to urban infrastructure, and similar colour statistics under overcast conditions. Rivers and lakes produce the same visual signature — still or slow-moving water surfaces that closely resemble inundated ground. Fountains introduce water in motion in urban settings. Wet roads and reflective pavement produce specular reflections that can mimic standing water, particularly at night (Schumann et al., 2023). None of these confounders are systematically represented in existing flood detection datasets, and none of the reviewed papers explicitly report false positive rates on confounding categories separately from aggregate precision.
 
-Misclassifying a swimming pool as flooded would trigger a false emergency dispatch. This category of error — high-confidence false positive on a semantically distinct but visually similar class — is precisely what hard negative mining is designed to correct.
+Misclassifying a swimming pool or river as flooded would trigger a false emergency dispatch. This category of error — high-confidence false positive on a semantically distinct but visually similar class — is precisely what hard negative mining is designed to correct.
 
 ### The confirmation bias problem in self-mining
 
@@ -55,11 +55,11 @@ Most flood detection papers report single-run results on test sets of 500–600 
 
 ## Key Contributions
 
-1. **Explicit offline HNM for street-level flood classification.** No prior paper applies mining-and-augmentation of specific confounder categories (swimming pools, wet roads) to the flood binary classification problem. This project implements offline HNM with 5× augmentation injection for both EfficientNetB0 and ResNet50, enabling a direct architectural comparison of HNM benefit.
+1. **Explicit offline HNM for street-level flood classification.** No prior paper applies mining-and-augmentation of specific confounder categories (swimming pools, rivers, lakes, fountains) to the flood binary classification problem. This project implements offline HNM with 5× augmentation injection for both EfficientNetB0 and ResNet50, enabling a direct architectural comparison of HNM benefit.
 
 2. **Two-phase progressive fine-tuning protocol.** Progressive unfreezing is known to mitigate catastrophic forgetting (Lyu et al., 2025; Neupane et al., 2025) but has not been evaluated on flood datasets. This project ablates phase boundaries for both backbones.
 
-3. **Systematic confounder FP analysis.** False positive rates on each non-flood category (swimming pool, wet road, animals, vehicles, buildings) are reported separately with Clopper-Pearson binomial CIs. The swimming pool result of 0/15 carries a 95% CI of approximately [0%, 21.8%] — reported honestly, not as "complete elimination."
+3. **Systematic confounder FP analysis with statistically powered test sets.** The original dataset contained only 15 swimming pool test images and no river, lake, or fountain images — insufficient for meaningful Clopper-Pearson CIs. Four confounder categories are expanded to 400 images each (target ~60 test images per category after 70/15/15 split), pushing the CI upper bound to ~5.9% at 0% FP rate. False positive rates on each category are reported separately with binomial CIs.
 
 4. **Three-way ablation design.** Two controls isolate exactly what drives performance: (a) `--no_injection` matches the epoch budget but injects nothing — isolates HNM from extra training time; (b) `--random_injection` injects the same number of non-flood images selected randomly (not by flood probability) from the same candidate pool — isolates the hard-negative ranking from a simple data-augmentation effect. Together these are the two most critical ablations in the pipeline.
 
@@ -67,7 +67,7 @@ Most flood detection papers report single-run results on test sets of 500–600 
 
 6. **PR-AUC as primary metric.** ROC-AUC is known to be misleadingly optimistic under class imbalance (Davis & Goadrich, 2006). PR-AUC directly captures the precision-recall tradeoff that matters for screening: high recall subject to a manageable false positive rate.
 
-7. **Statistically rigorous evaluation.** Multi-seed runs (seeds 42, 123, 256, 512, 1024) with bootstrap CIs and McNemar's test for pairwise model comparisons. Fisher's exact test for swimming pool FP rate comparisons.
+7. **Statistically rigorous evaluation.** Multi-seed runs (seeds 42, 123, 256, 512, 1024) with bootstrap CIs and McNemar's test for pairwise model comparisons. Fisher's exact test for per-category FP rate comparisons.
 
 8. **Severity-stratified recall.** The dataset preserves flood severity labels (MajorFlood, ModerateFlood, MinorFlood). Recall broken down by severity identifies which flood presentations the model misses most, which has direct operational implications for emergency response triage.
 
@@ -164,25 +164,26 @@ Thresholds are swept from 0.05 to 0.95 on the **validation set** to find the ope
 - 5-seed runs (42, 123, 256, 512, 1024): mean ± std reported for all metrics
 - Bootstrap 95% CIs (1,000 resamples) on all test-set metrics
 - McNemar's test for pairwise model accuracy comparisons
-- Clopper-Pearson binomial CIs for swimming pool FP rate
-- Fisher's exact test for pre/post-HNM pool FP comparison
+- Clopper-Pearson binomial CIs for per-category confounder FP rates
+- Fisher's exact test for pre/post-HNM FP comparisons per category
 
 ### Visualisations
 
 - Precision-Recall and ROC curves per model
 - Confusion matrices with cell counts
-- GradCAM++ heatmaps for FN, FP, swimming pool, and correctly classified sets (`scripts/grad_cam.py`)
-- t-SNE / UMAP on Dense(256) embeddings, coloured by true label and swimming pool flag
+- GradCAM++ heatmaps for FN, FP, and confounder category sets (`scripts/grad_cam.py`)
+- t-SNE / UMAP on Dense(256) embeddings, coloured by true label and confounder category
 - Reliability diagrams (pre- and post-calibration ECE)
 - Severity-stratified recall bar chart
+- Per-category FP rate table with Clopper-Pearson CIs across all model variants
 
 ---
 
-## Datasets and Evaluation
+## Datasets
 
-### Primary Dataset
+### Flood Classification — Primary Dataset
 
-**FloodingDataset2** (University of South Florida) — 3,754 street-level images.
+**FloodingDataset2** (University of South Florida) — 3,754 street-level images with severity labels.
 
 ```
 FloodingDataset2/
@@ -190,21 +191,46 @@ FloodingDataset2/
     MajorFlood/    MinorFlood/    ModerateFlood/
     NoFlood/       parks_walkways/
   junk/
-    Swimmingpool.zip, Cars.zip, Dogs.zip, ...  (12 distractor categories)
+    Swimmingpool/  River/  Lake/  Fountain/   ← expanded confounder categories
+    Cats/  Dogs/  Cars/  ...                  ← original distractor categories
   processed_data/
     binary/
       train/  (flood/, non_flood/)   — 2,627 images  (70%)
       val/    (flood/, non_flood/)   —   563 images  (15%)
       test/   (flood/, non_flood/)   —   564 images  (15%)
+    split_manifest.csv               — per-image split assignment audit trail
 ```
 
-Splits are stratified by `multiclass_label × is_swimming_pool` (seed 42). Hard negatives: 15 swimming pool images in test.
+Splits are stratified by category (seed 42, 70/15/15). Run `notebooks/02_prepare_confounder_data.ipynb` to populate and re-split the confounder categories.
 
-### Cross-Dataset Validation (planned)
+### Backbone Pretraining
 
-- **CrisisMMD / CrisisBench** — social media ground-level disaster images; best domain match for generalisation testing.
-- **AlleyFloodNet** — street-level alley flooding; directly comparable deployment scenario.
-- Zero-shot transfer and lightweight head-only adaptation both reported.
+**ImageNet** — pretrained weights for EfficientNetB0 and ResNet50 loaded via `tf.keras.applications`. Not used directly for training or evaluation.
+
+### Confounder Category Sources
+
+The four high-risk visual confounder categories are populated from external datasets via the download scripts in `scripts/`. Target: 400 images per category (~60 test images after split).
+
+| Category | Visual similarity to flood | Source dataset(s) | Script |
+|---|---|---|---|
+| **Swimmingpool** | High — flat reflective water at ground level | Places365 (MIT), Open Images v7 (Google) | `download_swimmingpool.py` |
+| **River** | High — flowing water, often muddy or turbulent | ATLANTIS, RIWA, WaterNet (ADE20K subset), LuFI-RiverSnap | `download_river.py` |
+| **Lake** | High — still water surface / shoreline | ATLANTIS, WaterNet (ADE20K subset) | `download_lake.py` |
+| **Fountain** | Medium — water in motion, urban setting | Open Images v7 (Google), ADE20K (MIT CSAIL) | `download_fountain.py` |
+
+**Source details:**
+
+| Dataset | Access | Used for |
+|---|---|---|
+| Places365 (MIT CSAIL) | Public HTTP | Swimmingpool outdoor category |
+| Open Images v7 (Google) | fiftyone zoo / CSV fallback | Swimmingpool, Fountain |
+| ATLANTIS (Erfani et al.) | GitHub releases, COCO JSON | River (river/canal/stream), Lake (lake/pond/reservoir/wetland) |
+| RIWA | Kaggle `franzwagner/river-water-segmentation-dataset` | River |
+| WaterNet / ADE20K subset | Kaggle `gvclsu/water-segmentation-dataset` | River, Lake |
+| LuFI-RiverSnap | Kaggle `arminmoghimi/lufi-riversnap` | River |
+| ADE20K (MIT CSAIL) | Public index JSON | Fountain |
+
+All confounder images are converted to RGB JPEG, named `{Category}_{NNNN}.jpg`, and written to `data/FloodingDataset2/junk/{Category}/`. Download scripts are idempotent and can be re-run safely.
 
 ### Evaluation Metrics
 
@@ -214,7 +240,7 @@ Splits are stratified by `multiclass_label × is_swimming_pool` (seed 42). Hard 
 | Recall | Primary operational metric (high recall ≥ 95% target) |
 | F1, Precision, Accuracy | Secondary |
 | ROC-AUC | Reported for comparison only |
-| Pool FP rate + Clopper-Pearson CI | Confounder-specific FP analysis |
+| Per-category FP rate + Clopper-Pearson CI | Confounder-specific FP analysis (Swimmingpool, River, Lake, Fountain) |
 | ECE, reliability diagram | Probability calibration quality |
 | Severity-stratified recall | Geoscience contribution |
 
@@ -225,7 +251,7 @@ Splits are stratified by `multiclass_label × is_swimming_pool` (seed 42). Hard 
 | Step | Notebook | Script | Compute |
 |------|----------|--------|---------|
 | 1. Data exploration | `01_data_exploration.ipynb` | — | CPU |
-| 2. Stratified splitting | `02_stratified_splitting.ipynb` | — | CPU |
+| 2. Confounder download + stratified split | `02_prepare_confounder_data.ipynb` | `download_{category}.py` | CPU |
 | 3a. Baseline EfficientNetB0 (BCE) | `03_baseline_efficientnetb0.ipynb` | `train_baseline.py --arch efficientnet --loss binary_crossentropy` | T4 GPU |
 | 3b. Baseline EfficientNetB0 (Focal) | — | `train_baseline.py --arch efficientnet --loss focal` | T4 GPU |
 | 4a. Baseline ResNet50 (BCE) | `04_baseline_resnet50.ipynb` | `train_baseline.py --arch resnet50 --loss binary_crossentropy` | T4 GPU |
@@ -240,7 +266,7 @@ Splits are stratified by `multiclass_label × is_swimming_pool` (seed 42). Hard 
 | 6. Evaluation | `06_evaluation.ipynb` | `evaluate.py` | CPU/GPU |
 | 7. Seed aggregation | — | `aggregate_seeds.py` | CPU |
 
-**Execution order:** `03a/3b → 04a/4b → 05a → 05b–5g → 06 → 07`
+**Execution order:** `02 → 03a/3b → 04a/4b → 05a → 05b–5g → 06 → 07`
 
 After step 05a, copy the printed checkpoint path into `MODEL_PATH` in the HNM notebooks before running.
 
@@ -260,7 +286,7 @@ python scripts/aggregate_seeds.py \
   --output         results/tables/seed_aggregation_efficientnet.csv
 ```
 
-Outputs a unified CSV with mean ± std for PR-AUC, Recall, F1, and pool FP rate across all conditions, plus Bonferroni-corrected McNemar p-values vs. the baseline BCE condition.
+Outputs a unified CSV with mean ± std for PR-AUC, Recall, F1, and per-category FP rates across all conditions, plus Bonferroni-corrected McNemar p-values vs. the baseline BCE condition.
 
 ---
 
@@ -271,17 +297,17 @@ The best-case outcome demonstrates four things:
 1. **HNM beats both controls.** `--no_injection` (epoch-matched) and `--random_injection` (data-size-matched) both fall short of HNM — establishing that the benefit comes specifically from the hard-negative nature of the injected images, not from extra training time or more non-flood data.
 2. **Focal loss and HNM are complementary.** In the 2×2 factorial, HNM+Focal outperforms HNM+BCE and Focal alone — showing the two mechanisms target different aspects of the confounder problem.
 3. **Cross-seed consistency.** Hard negatives identified by different random seeds substantially overlap, suggesting the mining step targets a stable region of the decision boundary rather than reflecting initialisation noise.
-4. **PR-AUC ≥ 0.97 with ≥ 95% recall and ≤ 5% pool FP rate**, with 95% CIs that do not overlap the baseline. This would support the claim of a confounder-robust first-pass screening system.
+4. **PR-AUC ≥ 0.97 with ≥ 95% recall and ≤ 5% FP rate across all four confounder categories**, with 95% CIs that do not overlap the baseline. This would support the claim of a confounder-robust first-pass screening system.
 
 ---
 
 ## Known Limitations
 
-1. **Dataset size and source diversity.** 3,754 images from a single institutional source is small for deep learning. Geographic and photographer diversity is not documented.
+1. **Dataset size and source diversity.** The flood images (3,754) come from a single institutional source. Geographic and photographer diversity is not documented. The confounder images are aggregated from seven external datasets with different domains, resolutions, and collection conditions.
 2. **Random splitting vs. event-based splitting.** If images from the same flood event appear in both train and test, the model may recognise the scene rather than the flood. Without event metadata this cannot be fully mitigated.
-3. **Swimming pool sample size.** 15 pool images cannot support a statistically meaningful FP rate. A 0% observed rate has a 95% CI of approximately [0%, 21.8%]. Claims of "complete elimination" must not appear without this CI.
-4. **Only 2 hard negatives mined in the CIBB baseline.** Whether the method generalises to other confounders (wet roads, irrigation channels, rain-obscured scenes) remains untested.
-5. **Validation set double-duty in HNM pipeline.** The same 563-image validation set selects the baseline checkpoint used for mining and then selects the retrained HNM checkpoint. This introduces a weak dependency between the validation partition and the HNM training data. Test-set results are the definitive evaluation.
+3. **Confounder sample size pre-expansion.** The original 15 pool test images gave a CI of [0%, 21.8%] at 0% FP — scientifically indefensible. The download scripts target 400 images per category to reach a defensible ~5.9% upper bound. Results should not be reported until the expanded test set is in place.
+4. **Confirmation bias in self-mining.** A model mines hard negatives that are hard for its current state. If seeds mine different sets, the benefit may not generalise. The cross-seed overlap analysis addresses this directly.
+5. **Validation set double-duty in HNM pipeline.** The same 563-image validation set selects both the baseline checkpoint used for mining and the post-HNM checkpoint. There is a weak data-dependency between the mining selection and the model being evaluated on validation — test results are the only clean evaluation.
 6. **Geoscience framing.** This is a first-stage filter within a larger geoscience pipeline, not a standalone hydrological analysis system. The contribution must be connected to operational flood monitoring infrastructure to meet *Computers & Geosciences* scope.
 
 ---
@@ -293,6 +319,31 @@ The best-case outcome demonstrates four things:
 ```bash
 pip install -r requirements.txt
 ```
+
+### Dataset download (CPU, run once)
+
+```bash
+# Required: pip install requests Pillow tqdm gdown
+# Optional: pip install kaggle fiftyone  (for Kaggle/Open Images sources)
+
+# 1. Download USF FloodingDataset2 from Google Drive (primary flood dataset)
+python scripts/download_usf.py --output_dir ./data/FloodingDataset2
+#    This also unpacks junk/*.zip archives in place.
+#    If gdown hits rate limits, re-run — it resumes automatically.
+
+# 2. Supplement/download the four visual confounder categories
+python scripts/download_swimmingpool.py --max 400  # Places365 val tar + Open Images
+python scripts/download_river.py        --max 400  # ATLANTIS + RIWA + WaterNet + LuFI
+python scripts/download_lake.py         --max 400  # ATLANTIS + WaterNet
+python scripts/download_fountain.py     --max 400  # Open Images + ADE20K
+
+# 3. Or run everything including the stratified split via notebook:
+#    notebooks/02_prepare_confounder_data.ipynb
+```
+
+All scripts are idempotent — re-running after a partial failure continues from where it left off.
+
+**ATLANTIS note:** The ATLANTIS dataset images are not bundled in the GitHub repository (only code and annotations are). If `download_river.py` / `download_lake.py` report 0 images from the atlantis source, the images must be requested directly from the authors at https://github.com/smhassanerfani/atlantis. The Kaggle sources (RIWA, WaterNet, LuFI-RiverSnap) are sufficient substitutes for reaching 400 images.
 
 ### Colab (GPU training)
 
@@ -321,6 +372,8 @@ Pillow>=10.0
 scipy>=1.12
 tf-keras-vis>=0.8
 umap-learn>=0.5
+requests>=2.31
+tqdm>=4.66
 ```
 
 ---
@@ -329,15 +382,29 @@ umap-learn>=0.5
 
 ```
 imagevalidation2/
-  notebooks/          Colab-ready .ipynb wrappers (one per pipeline step)
+  notebooks/
+    01_data_exploration.ipynb
+    02_prepare_confounder_data.ipynb   ← download scripts + stratified split
+    03_baseline_efficientnetb0.ipynb
+    04_baseline_resnet50.ipynb
+    05a_confounder_analysis.ipynb
+    05b_hnm_efficientnetb0.ipynb
+    05c_hnm_resnet50.ipynb
+    06_evaluation.ipynb
   scripts/
-    utils.py               # seeding, model building, preprocessing, callbacks
-    train_baseline.py      # two-phase fine-tuning; --loss {bce,focal}
-    analyze_confounders.py # rank train/non_flood categories by FP rate
-    train_hnm.py           # HNM, --no_injection, --random_injection, --loss {bce,focal}
-    evaluate.py            # PR-AUC primary, bootstrap CI, McNemar, severity recall
-    grad_cam.py            # GradCAM++ heatmaps for FN/FP/pool/correct sets
-    aggregate_seeds.py     # unified multi-seed comparison table + McNemar tests
+    utils.py                    # seeding, model building, preprocessing, callbacks
+    train_baseline.py           # two-phase fine-tuning; --loss {bce,focal}
+    analyze_confounders.py      # rank train/non_flood categories by FP rate
+    train_hnm.py                # HNM, --no_injection, --random_injection, --loss {bce,focal}
+    evaluate.py                 # PR-AUC primary, bootstrap CI, McNemar, severity recall
+    grad_cam.py                 # GradCAM++ heatmaps for FN/FP/confounder sets
+    aggregate_seeds.py          # unified multi-seed comparison table + McNemar tests
+    download_utils.py           # shared: get_next_index, save_image, check_kaggle/fiftyone
+    download_usf.py             # USF FloodingDataset2 from Google Drive (gdown)
+    download_swimmingpool.py    # Places365 val tar + Open Images v7
+    download_river.py           # ATLANTIS + RIWA + WaterNet + LuFI-RiverSnap
+    download_lake.py            # ATLANTIS + WaterNet
+    download_fountain.py        # Open Images v7 + ADE20K
   results/
     figures/          PR curves, confusion matrices, GradCAM grids, reliability diagrams
     tables/           Metric CSVs, confounder FP rates, tau sweep results
