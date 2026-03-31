@@ -191,17 +191,25 @@ FloodingDataset2/
     MajorFlood/    MinorFlood/    ModerateFlood/
     NoFlood/       parks_walkways/
   junk/
-    Swimmingpool/  River/  Lake/  Fountain/   ← expanded confounder categories
-    Cats/  Dogs/  Cars/  ...                  ← original distractor categories
+    Swimmingpool/  River/  Lake/  Fountain/   ← water confounder categories (benchmark)
+    Cats/  Dogs/  Cars/  ...                  ← skipped (not benchmark categories)
+  extracted/junk/
+    building_exterior/  building_interior/    ← merged into building/ in processed split
   processed_data/
     binary/
-      train/  (flood/, non_flood/)   — 2,627 images  (70%)
-      val/    (flood/, non_flood/)   —   563 images  (15%)
-      test/   (flood/, non_flood/)   —   564 images  (15%)
-    split_manifest.csv               — per-image split assignment audit trail
+      train/
+        flood/     street_major/  street_minor/  street_moderate/
+        non_flood/ river/  lake/  swimming_pool/  fountain/  building/
+                   street_clear/  park_walkway/
+        metadata.csv                         — HuggingFace ImageFolder format
+      val/   (same structure)   —   ~15% images  +  metadata.csv
+      test/  (same structure)   —   ~15% images  +  metadata.csv
+  split_manifest.csv                         — full per-image audit trail (all splits)
 ```
 
-Splits are stratified by category (seed 42, 70/15/15). Run `notebooks/02_prepare_confounder_data.ipynb` to populate and re-split the confounder categories.
+Splits are stratified by category (seed 42, 70/15/15). Built by `build_splits.py`.
+Each `metadata.csv` has columns `file_name`, `category`, `source` for HuggingFace ImageFolder auto-detection.
+Run `notebooks/02_prepare_confounder_data.ipynb` to populate and re-split the confounder categories.
 
 ### Backbone Pretraining
 

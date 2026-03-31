@@ -354,6 +354,16 @@ def _compute_severity_recall(
         severity information is unavailable.
     """
     severity_map: Dict[int, str] = {}
+    # Maps new category-subfolder names → display severity label.
+    # Also covers legacy filename-prefix convention (MajorFlood, etc.).
+    severity_aliases = {
+        "street_major":    "MajorFlood",
+        "street_moderate": "ModerateFlood",
+        "street_minor":    "MinorFlood",
+        "majorflood":      "MajorFlood",
+        "moderateflood":   "ModerateFlood",
+        "minorflood":      "MinorFlood",
+    }
     severity_levels = {"MajorFlood", "ModerateFlood", "MinorFlood"}
 
     # Strategy 1: Look for test_split.csv with a 'category' column.
@@ -371,12 +381,13 @@ def _compute_severity_recall(
                 if cat in severity_levels:
                     severity_map[idx] = cat
 
-    # Strategy 2: Parse from filename prefix (before first underscore or dot).
+    # Strategy 2: Match against path segments (new subfolder layout) or
+    # filename prefix (legacy flat layout).
     if len(severity_map) == 0:
         for idx, fpath in enumerate(filenames):
-            fname = os.path.basename(fpath)
-            for sev in severity_levels:
-                if sev.lower() in fname.lower():
+            fpath_lower = fpath.lower().replace("\\", "/")
+            for alias, sev in severity_aliases.items():
+                if alias in fpath_lower:
                     severity_map[idx] = sev
                     break
 
@@ -414,13 +425,17 @@ def _pool_fp_analysis(
 ) -> Optional[Dict]:
     """Analyse false positive rate on swimming pool images.
 
-    Pool images are identified by 'swimmingpool' (case-insensitive) in path.
+    Pool images are identified by 'swimming_pool' or 'swimmingpool'
+    (case-insensitive) anywhere in the path — covers both the new
+    category-subfolder layout (non_flood/swimming_pool/) and the legacy
+    flat filename convention (Swimmingpool_001.jpg).
 
     Returns:
         Dict with pool analysis results, or None if no pool images found.
     """
     pool_mask = np.array(
-        ["swimmingpool" in f.lower() for f in filenames], dtype=bool
+        [("swimming_pool" in f.lower() or "swimmingpool" in f.lower()) for f in filenames],
+        dtype=bool,
     )
     n_pool = int(pool_mask.sum())
     if n_pool == 0:
@@ -728,14 +743,20 @@ def main() -> None:
     pred_rows = []
     for idx, fpath in enumerate(filenames):
         fname = os.path.basename(fpath)
-        # Determine category from directory path or filename.
-        category = ""
-        for sev in ["MajorFlood", "ModerateFlood", "MinorFlood"]:
-            if sev.lower() in fname.lower():
-                category = sev
-                break
-        if "swimmingpool" in fname.lower():
-            category = "SwimmingPool"
+        # Determine category from the subdirectory structure (new layout) or
+        # legacy filename prefix. fpath is relative to test_dir, e.g.
+        # "flood/street_major/img.jpg" or "non_flood/river/img.jpg".
+        parts = fpath.replace("\\", "/").split("/")
+        # parts[1] is the category subfolder when using the new layout
+        category = parts[1] if len(parts) >= 3 else ""
+        # Legacy fallback: filename-based detection
+        if not category:
+            for sev in ["MajorFlood", "ModerateFlood", "MinorFlood"]:
+                if sev.lower() in fname.lower():
+                    category = sev
+                    break
+            if not category and ("swimming_pool" in fname.lower() or "swimmingpool" in fname.lower()):
+                category = "swimming_pool"
 
         pred_rows.append(
             {
@@ -744,7 +765,9 @@ def main() -> None:
                 "predicted_label": int(y_pred_flood[idx]),
                 "flood_probability": float(y_prob[idx]),
                 "correct": bool(y_pred_flood[idx] == y_true_flood[idx]),
-                "is_swimming_pool": "swimmingpool" in fname.lower(),
+                "is_swimming_pool": (
+                    "swimming_pool" in fpath.lower() or "swimmingpool" in fname.lower()
+                ),
                 "category": category,
             }
         )

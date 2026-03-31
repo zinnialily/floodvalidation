@@ -112,6 +112,11 @@ def parse_args() -> argparse.Namespace:
         default=2.0,
         help="Focusing parameter gamma for focal loss (ignored for BCE).",
     )
+    parser.add_argument(
+        "--results_dir",
+        default="./results",
+        help="Directory for logs and evaluation outputs (separate from model checkpoints).",
+    )
     return parser.parse_args()
 
 
@@ -310,7 +315,7 @@ def main() -> None:
 
     # -- Directory setup ----------------------------------------------------
     os.makedirs(args.output_dir, exist_ok=True)
-    log_dir = os.path.join("results", "logs")
+    log_dir = os.path.join(args.results_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
     # -- Data paths ---------------------------------------------------------

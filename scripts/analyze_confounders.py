@@ -188,12 +188,14 @@ def collect_images_by_category(
     train_non_flood_dir: str,
     data_dir: str,
 ) -> Dict[str, List[str]]:
-    """Group all images in train/non_flood/ by their inferred category.
+    """Group all images in train/non_flood/ by their category.
 
-    Strategy (in priority order):
-    1. Filename prefix (text before first ``_`` in the stem).
-    2. ``train_split.csv`` category column in data_dir.
-    3. Single ``"unknown"`` bucket for everything that cannot be categorised.
+    With the new build_splits.py layout, images are stored in named category
+    subdirectories (e.g. train/non_flood/river/, train/non_flood/building/).
+    The category name is read directly from the subdirectory name.
+
+    Falls back to filename-prefix inference and CSV lookup for legacy flat
+    layouts where images sit directly inside train/non_flood/.
 
     Args:
         train_non_flood_dir: Absolute path to the train non-flood directory.
@@ -202,46 +204,50 @@ def collect_images_by_category(
     Returns:
         A dict mapping category name -> list of absolute image file paths.
     """
-    # Collect all image paths.
     valid_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
-    all_image_paths: List[str] = []
-    for entry in sorted(os.listdir(train_non_flood_dir)):
-        if Path(entry).suffix.lower() in valid_extensions:
-            all_image_paths.append(
-                os.path.abspath(os.path.join(train_non_flood_dir, entry))
-            )
+    categories: Dict[str, List[str]] = {}
+    flat_images: List[str] = []
 
-    if not all_image_paths:
+    for entry in sorted(Path(train_non_flood_dir).iterdir()):
+        if entry.is_dir():
+            # New layout: subdirectory name IS the category.
+            cat = entry.name
+            imgs = sorted(
+                str(p) for p in entry.iterdir()
+                if p.is_file() and p.suffix.lower() in valid_extensions
+            )
+            if imgs:
+                categories.setdefault(cat, []).extend(imgs)
+        elif entry.is_file() and entry.suffix.lower() in valid_extensions:
+            # Legacy flat layout: collect for filename-prefix fallback.
+            flat_images.append(str(entry.resolve()))
+
+    # Legacy fallback: filename prefix → CSV → "unknown".
+    if flat_images:
+        unresolved: List[str] = []
+        for img_path in flat_images:
+            cat = _category_from_filename(os.path.basename(img_path))
+            if cat is not None:
+                categories.setdefault(cat, []).append(img_path)
+            else:
+                unresolved.append(img_path)
+
+        if unresolved:
+            csv_mapping = _load_split_csv_categories(data_dir, train_non_flood_dir)
+            if csv_mapping:
+                still_unresolved: List[str] = []
+                for img_path in unresolved:
+                    if img_path in csv_mapping:
+                        categories.setdefault(csv_mapping[img_path], []).append(img_path)
+                    else:
+                        still_unresolved.append(img_path)
+                unresolved = still_unresolved
+            if unresolved:
+                categories.setdefault("unknown", []).extend(unresolved)
+
+    if not categories:
         print("[WARN] No images found in train/non_flood/ directory.")
         return {}
-
-    # Strategy 1: filename prefix.
-    categories: Dict[str, List[str]] = {}
-    unresolved: List[str] = []
-
-    for img_path in all_image_paths:
-        cat = _category_from_filename(os.path.basename(img_path))
-        if cat is not None:
-            categories.setdefault(cat, []).append(img_path)
-        else:
-            unresolved.append(img_path)
-
-    # Strategy 2: CSV fallback for unresolved images.
-    if unresolved:
-        csv_mapping = _load_split_csv_categories(data_dir, train_non_flood_dir)
-        if csv_mapping:
-            still_unresolved: List[str] = []
-            for img_path in unresolved:
-                if img_path in csv_mapping:
-                    cat = csv_mapping[img_path]
-                    categories.setdefault(cat, []).append(img_path)
-                else:
-                    still_unresolved.append(img_path)
-            unresolved = still_unresolved
-
-    # Strategy 3: group remaining as "unknown".
-    if unresolved:
-        categories.setdefault("unknown", []).extend(unresolved)
 
     total = sum(len(v) for v in categories.values())
     print(

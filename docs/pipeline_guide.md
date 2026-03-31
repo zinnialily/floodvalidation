@@ -80,38 +80,38 @@ data/FloodingDataset2/
 │
 ├── StreetFloodClasses/          ← PRIMARY FLOOD DATASET (USF)
 │   ├── MajorFlood/              ┐
-│   ├── ModerateFlood/           ├── labelled flood → binary/*/flood/
+│   ├── ModerateFlood/           ├── labelled flood → binary/*/flood/street_{major,moderate,minor}/
 │   ├── MinorFlood/              ┘
 │   ├── NoFlood/                 ┐
-│   └── parks_walkways/          ┘  labelled non-flood → binary/*/non_flood/
+│   └── parks_walkways/          ┘  non-flood → binary/*/non_flood/{street_clear,park_walkway}/
 │
-├── junk/                        ← CONFOUNDERS + DISTRACTORS
+├── junk/                        ← WATER CONFOUNDERS (benchmark categories)
 │   ├── Swimmingpool/            ┐
-│   ├── River/                   ├── visual confounders (high FP risk)
+│   ├── River/                   ├── visual confounders → binary/*/non_flood/{swimming_pool,river,lake,fountain}/
 │   ├── Lake/                    │   populated by download scripts
 │   ├── Fountain/                ┘
-│   ├── Cats/                    ┐
-│   ├── Dogs/                    ├── original distractors (already in dataset)
-│   ├── Cars/                    ┘
-│   └── ...
+│   ├── Cats/  Dogs/  Cars/  …   ← SKIPPED (not benchmark categories)
+│
+├── extracted/junk/              ← USF BUILDING IMAGES
+│   ├── building_exterior/       ┐
+│   └── building_interior/       ┘  → binary/*/non_flood/building/
 │
 └── processed_data/
-    └── binary/
+    └── binary/                  ← built by build_splits.py (seed 42, 70/15/15)
         ├── train/
-        │   ├── flood/           70% of flood images
-        │   └── non_flood/       70% of all junk categories
-        ├── val/
-        │   ├── flood/           15%
-        │   └── non_flood/       15%
-        └── test/
-            ├── flood/           15%
-            └── non_flood/       15%
+        │   ├── flood/           street_major/  street_moderate/  street_minor/
+        │   ├── non_flood/       river/  lake/  swimming_pool/  fountain/  building/
+        │   │                    street_clear/  park_walkway/
+        │   └── metadata.csv     ← HuggingFace ImageFolder format (file_name, category, source)
+        ├── val/    (same structure + metadata.csv)
+        └── test/   (same structure + metadata.csv)
 ```
 
 > The confounder images (Swimmingpool, River, Lake, Fountain) are downloaded
-> from external sources (Places365, Kaggle, Open Images, ADE20K) but written
-> directly into `junk/` — so they are part of FloodingDataset2 by the time
-> training runs.
+> from external sources (Places365, Kaggle, Open Images, ADE20K) and written
+> into `junk/`. `build_splits.py` copies them into the binary tree under named
+> category subfolders — so category membership is encoded structurally, not
+> inferred from filenames.
 
 ---
 
@@ -211,14 +211,14 @@ Ranks categories by false positive rate and writes out the candidates for mining
 | **Reads** | `processed_data/binary/train/non_flood/` only — val/test never touched |
 | **Outputs** | `results/tables/confounder_fp_rates_{arch}.csv`, `results/mining_candidates_{arch}.txt` |
 
-How category is inferred from filename:
+How category is inferred:
 ```
-Swimmingpool_0023.jpg  →  category = "Swimmingpool"
-River_0041.jpg         →  category = "River"
-NoFlood_img_003.jpg    →  category = "NoFlood"
+train/non_flood/swimming_pool/Swimmingpool_0023.jpg  →  category = "swimming_pool"
+train/non_flood/river/River_0041.jpg                 →  category = "river"
+train/non_flood/street_clear/NoFlood_img_003.jpg     →  category = "street_clear"
 ```
-(Text before the first `_` in the filename stem. This is why all download
-scripts name their outputs `{Category}_{NNNN}.jpg`.)
+Category is read from the subdirectory name (new layout from `build_splits.py`).
+Falls back to filename-prefix parsing and `train_split.csv` for legacy flat layouts.
 
 Sample output table:
 ```
@@ -314,9 +314,11 @@ results/figures/{model}_severity_recall.png
 Predictions CSV schema:
 ```
 filename              true_label  predicted_label  flood_probability  correct  is_swimming_pool  category
-MajorFlood_0012.jpg            1                1              0.943     True             False  MajorFlood
-Swimmingpool_0041.jpg          0                1              0.721    False              True  SwimmingPool
+MajorFlood_0012.jpg            1                1              0.943     True             False  street_major
+Swimmingpool_0041.jpg          0                1              0.721    False              True  swimming_pool
 ```
+`category` is taken from the subdirectory name in `test/flood/<category>/` or
+`test/non_flood/<category>/`.
 
 Metrics reported:
 ```

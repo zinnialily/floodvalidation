@@ -20,6 +20,9 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
+# Local dataset (large; download via run_dataset.sh or scripts/download_*.py)
+data/
+
 # Model checkpoints and large result files (stored on Drive)
 *.keras
 *.h5
@@ -30,4 +33,5 @@ results/figures/*.png
 
 # Secrets / credentials
 *.env
+api.md
 service_account*.json

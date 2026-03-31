@@ -239,7 +239,6 @@ def build_model(
         base_model = ResNet50(
             weights="imagenet",
             include_top=False,
-            include_preprocessing=False,
             input_shape=(224, 224, 3),
         )
 

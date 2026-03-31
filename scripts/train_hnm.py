@@ -179,6 +179,12 @@ def parse_args() -> argparse.Namespace:
             "candidates as HNM would mine, without probability-based ranking."
         ),
     )
+    parser.add_argument(
+        "--results_dir",
+        default="./results",
+        type=str,
+        help="Directory containing mining_candidates_{arch}.txt (from analyze_confounders.py).",
+    )
     return parser.parse_args()
 
 
@@ -254,6 +260,7 @@ def _collect_basenames_recursive(directory: str) -> set:
         Set of basename strings.
     """
     basenames = set()
+    
     for _root, _dirs, files in os.walk(directory):
         for f in files:
             if Path(f).suffix.lower() in VALID_IMAGE_EXTENSIONS:
@@ -431,9 +438,15 @@ def build_hnm_training_dir(
         dest = os.path.join(non_flood_dir, os.path.basename(aug_path))
         shutil.copy2(aug_path, dest)
 
-    # Count final composition.
-    flood_count = len(os.listdir(os.path.join(hnm_train_dir, "flood")))
-    non_flood_count = len(os.listdir(non_flood_dir))
+    # Count final composition (recursive, since both dirs use category subdirectories).
+    def _count_images(d: str) -> int:
+        return sum(
+            1 for _, _, files in os.walk(d)
+            for f in files if Path(f).suffix.lower() in VALID_IMAGE_EXTENSIONS
+        )
+
+    flood_count = _count_images(os.path.join(hnm_train_dir, "flood"))
+    non_flood_count = _count_images(non_flood_dir)
     print(
         f"[INFO] HNM training set: flood={flood_count}, "
         f"non_flood={non_flood_count} (original + {len(augmented_paths)} augmented)"
@@ -822,7 +835,7 @@ def run_percentile_mode(
     """
     data_dir = os.path.abspath(args.data_dir)
     output_dir = os.path.abspath(args.output_dir)
-    results_dir = os.path.abspath("results")
+    results_dir = os.path.abspath(args.results_dir)
     log_dir = os.path.join(results_dir, "logs")
 
     binary_dir = os.path.join(data_dir, "processed_data", "binary")
@@ -934,7 +947,7 @@ def run_sweep_mode(
     """
     data_dir = os.path.abspath(args.data_dir)
     output_dir = os.path.abspath(args.output_dir)
-    results_dir = os.path.abspath("results")
+    results_dir = os.path.abspath(args.results_dir)
     log_dir = os.path.join(results_dir, "logs")
     tables_dir = os.path.join(results_dir, "tables")
 
