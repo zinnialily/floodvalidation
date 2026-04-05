@@ -116,7 +116,18 @@ def parse_args() -> argparse.Namespace:
         "--model_path",
         required=True,
         type=str,
-        help="Path to baseline Phase 2 checkpoint (.keras file).",
+        help="Path to baseline Phase 2 checkpoint (.keras file) — used for retraining.",
+    )
+    parser.add_argument(
+        "--mining_model_path",
+        default=None,
+        type=str,
+        help=(
+            "Optional: separate Phase 1 checkpoint for scoring candidates. "
+            "If omitted, --model_path is also used for mining inference. "
+            "Using a Phase 1 checkpoint here gives higher-quality hard negative "
+            "selection because Phase 1 has not memorised the training distribution."
+        ),
     )
     parser.add_argument(
         "--data_dir",
@@ -235,11 +246,14 @@ def print_runtime_env() -> None:
     print("=" * 60)
     print("Runtime environment")
     print("=" * 60)
-    result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
-    if result.returncode == 0:
-        print(result.stdout[:600])
-    else:
-        print("nvidia-smi not available (CPU-only runtime or no driver).")
+    try:
+        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print(result.stdout[:600])
+        else:
+            print("nvidia-smi not available (CPU-only runtime or no driver).")
+    except FileNotFoundError:
+        print("nvidia-smi not found (macOS / CPU-only runtime).")
     print(f"TensorFlow version : {tf.__version__}")
     print(f"Python version     : {sys.version}")
     print("=" * 60)
@@ -286,7 +300,7 @@ def verify_partition_safety(
             a prior run. Checked for overlap if it exists.
     """
     val_files = _collect_basenames_recursive(val_dir)
-    test_files = _collect_basenames_recursive(test_dir)
+    test_files = _collect_basenames_recursive(test_dir) if os.path.isdir(test_dir) else set()
     held_out = val_files | test_files
 
     leaked = mining_files & held_out
@@ -758,13 +772,18 @@ def read_mining_candidates(results_dir: str, arch: str) -> List[str]:
         SystemExit: If file doesn't exist or is empty.
     """
     candidates_path = os.path.join(results_dir, f"mining_candidates_{arch}.txt")
-
+    # Also check results/mining/ subdirectory (reorganized layout).
     if not os.path.exists(candidates_path):
-        print(
-            f"[ERROR] Mining candidates file not found: {candidates_path}\n"
-            "Run analyze_confounders.py first."
-        )
-        sys.exit(1)
+        alt_path = os.path.join(results_dir, "mining", f"mining_candidates_{arch}.txt")
+        if os.path.exists(alt_path):
+            candidates_path = alt_path
+        else:
+            print(
+                f"[ERROR] Mining candidates file not found: {candidates_path}\n"
+                f"  Also checked: {alt_path}\n"
+                "Run analyze_confounders.py first."
+            )
+            sys.exit(1)
 
     with open(candidates_path, "r", encoding="utf-8") as fh:
         paths = [line.strip() for line in fh if line.strip()]
@@ -842,7 +861,9 @@ def run_percentile_mode(
     train_dir = os.path.join(binary_dir, "train")
     val_dir = os.path.join(binary_dir, "val")
     test_dir = os.path.join(binary_dir, "test")
-    hnm_dir = os.path.join(data_dir, "processed_data", "binary_hnm")
+    # Use arch+loss-specific hnm dir so BCE and Focal runs can execute in parallel.
+    loss_tag = "focal" if args.loss == "focal" else "bce"
+    hnm_dir = os.path.join(data_dir, "processed_data", f"binary_hnm_{args.arch}_{loss_tag}")
     hnm_train_dir = os.path.join(hnm_dir, "train")
     hnm_augmented_dir = os.path.join(hnm_dir, "augmented_hard_negatives")
 
@@ -853,11 +874,14 @@ def run_percentile_mode(
     mining_basenames = {os.path.basename(p) for p in candidate_paths}
     verify_partition_safety(mining_basenames, val_dir, test_dir, hnm_augmented_dir)
 
-    # 2. Run mining inference.
-    print(f"\n[INFO] Loading baseline model from: {args.model_path}")
-    model = tf.keras.models.load_model(args.model_path)
+    # 2. Run mining inference — use Phase 1 checkpoint if provided (higher FP rates
+    #    → better hard negative discrimination), else fall back to model_path.
+    mining_path = args.mining_model_path if args.mining_model_path else args.model_path
+    print(f"\n[INFO] Loading mining model from: {mining_path}")
+    mining_model = tf.keras.models.load_model(mining_path)
 
-    scores = mine_candidates(model, candidate_paths, args.arch)
+    scores = mine_candidates(mining_model, candidate_paths, args.arch)
+    del mining_model  # free memory before retraining
 
     # 3. Sort by flood_prob descending, take top percentage.
     scores.sort(key=lambda x: x[1], reverse=True)
@@ -904,6 +928,7 @@ def run_percentile_mode(
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
 
+    loss_tag = "focal" if args.loss == "focal" else "bce"
     model = train_hnm_phases(
         model=model,
         base_model=base_model,
@@ -915,13 +940,13 @@ def run_percentile_mode(
         output_dir=output_dir,
         log_dir=log_dir,
         arch=args.arch,
-        label="hnm_percentile",
+        label=f"hnm_percentile_{loss_tag}",
         timestamp=timestamp,
         loss_fn=get_loss(args),
     )
 
     # 11. Save final model.
-    final_path = os.path.join(output_dir, f"{args.arch}_hnm_percentile_{timestamp}.keras")
+    final_path = os.path.join(output_dir, f"{args.arch}_hnm_percentile_{loss_tag}_{timestamp}.keras")
     model.save(final_path)
     print(f"\n[DONE] HNM percentile model saved: {final_path}")
 
@@ -955,7 +980,9 @@ def run_sweep_mode(
     train_dir = os.path.join(binary_dir, "train")
     val_dir = os.path.join(binary_dir, "val")
     test_dir = os.path.join(binary_dir, "test")
-    hnm_dir = os.path.join(data_dir, "processed_data", "binary_hnm")
+    # Use arch+loss-specific hnm dir so BCE and Focal runs can execute in parallel.
+    loss_tag = "focal" if args.loss == "focal" else "bce"
+    hnm_dir = os.path.join(data_dir, "processed_data", f"binary_hnm_{args.arch}_{loss_tag}")
     hnm_train_dir = os.path.join(hnm_dir, "train")
     hnm_augmented_dir = os.path.join(hnm_dir, "augmented_hard_negatives")
 
@@ -1169,8 +1196,8 @@ def run_random_injection_mode(
     """
     data_dir = os.path.abspath(args.data_dir)
     output_dir = os.path.abspath(args.output_dir)
-    results_dir = os.path.join("results", "tables")
-    log_dir = os.path.join("results", "logs")
+    results_dir = os.path.abspath(args.results_dir)
+    log_dir = os.path.join(results_dir, "logs")
 
     binary_dir = os.path.join(data_dir, "processed_data", "binary")
     train_dir = os.path.join(binary_dir, "train")
@@ -1222,6 +1249,7 @@ def run_random_injection_mode(
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
 
+    loss_tag = "focal" if args.loss == "focal" else "bce"
     model = train_hnm_phases(
         model=model,
         base_model=base_model,
@@ -1233,13 +1261,13 @@ def run_random_injection_mode(
         output_dir=output_dir,
         log_dir=log_dir,
         arch=args.arch,
-        label="random_inject",
+        label=f"random_inject_{loss_tag}",
         timestamp=timestamp,
         loss_fn=get_loss(args),
     )
 
     final_path = os.path.join(
-        output_dir, f"{args.arch}_random_inject_{timestamp}.keras"
+        output_dir, f"{args.arch}_random_inject_{loss_tag}_{timestamp}.keras"
     )
     model.save(final_path)
     print(f"\n[DONE] Random-injection control complete. Model saved: {final_path}")
@@ -1290,6 +1318,7 @@ def run_no_injection_mode(
     os.makedirs(log_dir, exist_ok=True)
 
     # Train for TOTAL_HNM_BUDGET epochs, split into two phases.
+    loss_tag = "focal" if args.loss == "focal" else "bce"
     model = train_hnm_phases(
         model=model,
         base_model=base_model,
@@ -1301,12 +1330,12 @@ def run_no_injection_mode(
         output_dir=output_dir,
         log_dir=log_dir,
         arch=args.arch,
-        label="extended_baseline",
+        label=f"extended_baseline_{loss_tag}",
         timestamp=timestamp,
         loss_fn=get_loss(args),
     )
 
-    final_path = os.path.join(output_dir, f"{args.arch}_extended_baseline_{timestamp}.keras")
+    final_path = os.path.join(output_dir, f"{args.arch}_extended_baseline_{loss_tag}_{timestamp}.keras")
     model.save(final_path)
     print(f"\n[DONE] Extended baseline (no HNM injection) complete.")
     print(f"Model saved: {final_path}")
@@ -1335,7 +1364,7 @@ def main() -> None:
 
     # Validate data directory.
     binary_dir = os.path.join(os.path.abspath(args.data_dir), "processed_data", "binary")
-    for subdir in ("train", "val", "test"):
+    for subdir in ("train", "val"):
         split_path = os.path.join(binary_dir, subdir)
         if not os.path.isdir(split_path):
             raise FileNotFoundError(
@@ -1343,6 +1372,9 @@ def main() -> None:
                 "Ensure --data_dir points to the dataset root and that "
                 "Step 2 (stratified splitting) has been run."
             )
+    # test split is optional — not all datasets include one
+    if not os.path.isdir(os.path.join(binary_dir, "test")):
+        print("[INFO] No test split found — leakage check will cover val only.")
 
     # Dispatch.
     if args.random_injection:

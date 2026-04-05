@@ -99,6 +99,22 @@ def parse_args() -> argparse.Namespace:
         type=str,
         help="Directory where result tables and candidate lists are written.",
     )
+    parser.add_argument(
+        "--split",
+        default="train",
+        choices=["train", "val"],
+        help="Which data split to run confounder analysis on.",
+    )
+    parser.add_argument(
+        "--mine_all",
+        action="store_true",
+        help=(
+            "Write ALL non-flood images as mining candidates, regardless of FP rate. "
+            "Use when binary FP rates are near zero (e.g. Phase 1 checkpoint) but "
+            "probability-based mining is still desired. HNM's --top_pct then selects "
+            "the hardest examples by flood probability score."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -438,8 +454,9 @@ def write_mining_candidates(
     Returns:
         Tuple of (output_file_path, list_of_flagged_category_names).
     """
-    os.makedirs(output_dir, exist_ok=True)
-    candidates_path = os.path.join(output_dir, f"mining_candidates_{arch}.txt")
+    mining_dir = os.path.join(output_dir, "mining")
+    os.makedirs(mining_dir, exist_ok=True)
+    candidates_path = os.path.join(mining_dir, f"mining_candidates_{arch}.txt")
 
     flagged_cats = df[df["fp_rate"] > fp_threshold]["category"].tolist()
 
@@ -482,19 +499,20 @@ def main() -> None:
     # Resolve paths.
     data_dir: str = os.path.abspath(args.data_dir)
     output_dir: str = os.path.abspath(args.output_dir)
-    train_non_flood_dir: str = os.path.join(
-        data_dir, "processed_data", "binary", "train", "non_flood"
+    split: str = args.split
+    non_flood_dir: str = os.path.join(
+        data_dir, "processed_data", "binary", split, "non_flood"
     )
 
     # Validate inputs.
-    if not os.path.isdir(train_non_flood_dir):
+    if not os.path.isdir(non_flood_dir):
         raise FileNotFoundError(
-            f"Training non-flood directory not found: {train_non_flood_dir}\n"
+            f"Non-flood directory not found: {non_flood_dir}\n"
             "Run 02_stratified_splitting.ipynb first to create the split."
         )
 
     # Partition safety announcement.
-    confirm_partition_safety(train_non_flood_dir)
+    confirm_partition_safety(non_flood_dir)
 
     # Load model.
     model = load_model_safe(args.model_path)
@@ -503,7 +521,7 @@ def main() -> None:
     preprocess_fn = PREPROCESS_FN[args.arch]
 
     # Group images by category.
-    categories = collect_images_by_category(train_non_flood_dir, data_dir)
+    categories = collect_images_by_category(non_flood_dir, data_dir)
     if not categories:
         print("[ERROR] No images found. Exiting.")
         sys.exit(1)
@@ -515,17 +533,39 @@ def main() -> None:
     # Print ranked table.
     print_ranked_table(df_fp_rates)
 
-    # Save CSV.
-    save_fp_rates_csv(df_fp_rates, output_dir, args.arch)
+    # Save CSV (suffix split name so train/val outputs don't overwrite each other).
+    arch_split_tag = f"{args.arch}_{split.upper()}"
+    save_fp_rates_csv(df_fp_rates, output_dir, arch_split_tag)
 
-    # Write mining candidate image paths.
-    write_mining_candidates(
-        df_fp_rates,
-        categories,
-        args.fp_threshold,
-        output_dir,
-        args.arch,
-    )
+    # Write mining candidates only for the train split.
+    if split == "train":
+        if args.mine_all:
+            # Write every non-flood training image as a candidate.
+            # HNM's --top_pct will rank by flood probability and select the hardest N%.
+            # Used when binary FP rates are near zero (e.g. Phase 1 checkpoint) but
+            # probability-based mining is still desired.
+            all_images = sorted(p for paths in categories.values() for p in paths)
+            mining_dir = os.path.join(output_dir, "mining")
+            os.makedirs(mining_dir, exist_ok=True)
+            candidates_path = os.path.join(mining_dir, f"mining_candidates_{args.arch}.txt")
+            with open(candidates_path, "w", encoding="utf-8") as fh:
+                for img_path in all_images:
+                    fh.write(img_path + "\n")
+            print(
+                f"\n[INFO] --mine_all: wrote all {len(all_images)} non-flood training "
+                f"images as candidates → {candidates_path}"
+            )
+            print("[INFO] HNM --top_pct will select the hardest examples by flood probability.")
+        else:
+            write_mining_candidates(
+                df_fp_rates,
+                categories,
+                args.fp_threshold,
+                output_dir,
+                args.arch,
+            )
+    else:
+        print("[INFO] --split=val: skipping mining candidates file (train split only).")
 
     print("\n[DONE] analyze_confounders.py completed successfully.")
 

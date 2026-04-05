@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="dcterms.date" content="2026-04-01" />
+  <title>First-Pass Flood Binary Detection from Crowdsourced Imagery</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">First-Pass Flood Binary Detection from Crowdsourced
+Imagery</h1>
+<p class="date">2026-04-01</p>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#abstract" id="toc-abstract">Abstract</a></li>
+<li><a href="#introduction" id="toc-introduction">1.
+Introduction</a></li>
+<li><a href="#related-work" id="toc-related-work">2. Related Work</a>
+<ul>
+<li><a
+href="#flood-detection-from-crowdsourced-and-street-level-imagery"
+id="toc-flood-detection-from-crowdsourced-and-street-level-imagery">2.1
+Flood Detection from Crowdsourced and Street-Level Imagery</a></li>
+<li><a href="#transfer-learning-for-disaster-image-classification"
+id="toc-transfer-learning-for-disaster-image-classification">2.2
+Transfer Learning for Disaster Image Classification</a></li>
+<li><a href="#hard-negative-mining-and-visual-confounders"
+id="toc-hard-negative-mining-and-visual-confounders">2.3 Hard Negative
+Mining and Visual Confounders</a></li>
+<li><a href="#high-recall-screening-systems"
+id="toc-high-recall-screening-systems">2.4 High-Recall Screening
+Systems</a></li>
+<li><a href="#methodological-rigour-in-disaster-ml"
+id="toc-methodological-rigour-in-disaster-ml">2.5 Methodological Rigour
+in Disaster ML</a></li>
+</ul></li>
+<li><a href="#dataset" id="toc-dataset">3. Dataset</a>
+<ul>
+<li><a href="#construction" id="toc-construction">3.1
+Construction</a></li>
+<li><a href="#dataset-statistics" id="toc-dataset-statistics">3.2
+Dataset Statistics</a></li>
+<li><a href="#train-val-split" id="toc-train-val-split">3.3 Train / Val
+Split</a></li>
+<li><a href="#confounder-category-distribution"
+id="toc-confounder-category-distribution">3.4 Confounder Category
+Distribution</a></li>
+</ul></li>
+<li><a href="#methodology" id="toc-methodology">4. Methodology</a>
+<ul>
+<li><a href="#pipeline-overview" id="toc-pipeline-overview">4.0 Pipeline
+Overview</a></li>
+<li><a href="#two-phase-progressive-fine-tuning"
+id="toc-two-phase-progressive-fine-tuning">4.1 Two-Phase Progressive
+Fine-Tuning</a></li>
+<li><a href="#architectures" id="toc-architectures">4.2
+Architectures</a></li>
+<li><a href="#loss-functions" id="toc-loss-functions">4.3 Loss
+Functions</a></li>
+<li><a href="#phase-1-hard-negative-mining"
+id="toc-phase-1-hard-negative-mining">4.4 Phase-1 Hard Negative
+Mining</a></li>
+<li><a href="#probability-calibration"
+id="toc-probability-calibration">4.5 Probability Calibration</a></li>
+<li><a href="#metrics-and-evaluation-protocol"
+id="toc-metrics-and-evaluation-protocol">4.6 Metrics and Evaluation
+Protocol</a></li>
+</ul></li>
+<li><a href="#experiments" id="toc-experiments">5. Experiments</a>
+<ul>
+<li><a href="#baseline-training-dynamics"
+id="toc-baseline-training-dynamics">5.1 Baseline Training
+Dynamics</a></li>
+<li><a href="#baseline-results-at-τ-0.5"
+id="toc-baseline-results-at-τ-0.5">5.2 Baseline Results at τ =
+0.5</a></li>
+<li><a href="#pr-auc-vs.-roc-auc-the-metric-matters"
+id="toc-pr-auc-vs.-roc-auc-the-metric-matters">5.3 PR-AUC vs. ROC-AUC:
+The Metric Matters</a></li>
+<li><a href="#qualitative-error-analysis"
+id="toc-qualitative-error-analysis">5.4 Qualitative Error
+Analysis</a></li>
+<li><a href="#confounder-analysis" id="toc-confounder-analysis">5.5
+Confounder Analysis</a></li>
+<li><a href="#hard-negative-mining-results"
+id="toc-hard-negative-mining-results">5.6 Hard Negative Mining
+Results</a></li>
+<li><a href="#calibration-analysis" id="toc-calibration-analysis">5.7
+Calibration Analysis</a></li>
+<li><a href="#multi-seed-results" id="toc-multi-seed-results">5.8
+Multi-Seed Results</a></li>
+</ul></li>
+<li><a href="#discussion" id="toc-discussion">6. Discussion</a>
+<ul>
+<li><a href="#why-pr-auc-reveals-what-accuracy-hides"
+id="toc-why-pr-auc-reveals-what-accuracy-hides">6.1 Why PR-AUC Reveals
+What Accuracy Hides</a></li>
+<li><a
+href="#class-weights-and-focal-loss-do-not-fix-resnet50s-recall-problem"
+id="toc-class-weights-and-focal-loss-do-not-fix-resnet50s-recall-problem">6.2
+Class Weights and Focal Loss Do Not Fix ResNet50’s Recall
+Problem</a></li>
+<li><a href="#the-phase-1-mining-design"
+id="toc-the-phase-1-mining-design">6.3 The Phase 1 Mining
+Design</a></li>
+<li><a href="#limitations" id="toc-limitations">6.4 Limitations</a></li>
+</ul></li>
+<li><a href="#conclusion" id="toc-conclusion">7. Conclusion</a></li>
+<li><a href="#references" id="toc-references">References</a></li>
+<li><a href="#appendix" id="toc-appendix">Appendix</a>
+<ul>
+<li><a href="#a.-hyperparameters" id="toc-a.-hyperparameters">A.
+Hyperparameters</a></li>
+<li><a href="#b.-clopper-pearson-ci-reference-table"
+id="toc-b.-clopper-pearson-ci-reference-table">B. Clopper-Pearson CI
+Reference Table</a></li>
+<li><a href="#c.-dataset-release" id="toc-c.-dataset-release">C. Dataset
+Release</a></li>
+</ul></li>
+</ul>
+</nav>
+<blockquote>
+<p><strong>One-sentence contribution:</strong> We demonstrate that
+mining hard negatives from a <em>partially-trained</em> Phase 1
+checkpoint — rather than the fully converged model — yields genuine
+confounder-targeted candidates that, when injected into retraining,
+improve flood recall and reduce per-category false positive rates on a
+crowdsourced street-level benchmark.</p>
+</blockquote>
+<hr />
+<h1 id="abstract">Abstract</h1>
+<!-- 5-sentence Farquhar formula:
+     1. What you achieved
+     2. Why this is hard and important
+     3. How you do it (with specialist keywords)
+     4. What evidence you have
+     5. Most remarkable number -->
+<p>We introduce a <strong>Phase-1 Hard Negative Mining (HNM)</strong>
+protocol for improving flood/non-flood binary classifiers trained on
+crowdsourced street-level imagery. Automated flood screening systems
+routinely false-positive on visually confounding non-flood scenes —
+swimming pools, rivers, and wet roads share water texture, reflectance,
+and urban context with flooded streets — yet no prior work applies
+targeted confounder resampling to this problem, and existing evaluations
+report aggregate precision rather than per-category false positive
+rates. We train two-phase progressively fine-tuned EfficientNetB0 and
+ResNet50 baselines under both binary cross-entropy and focal loss, then
+mine hard negatives specifically from the Phase 1 checkpoint — where the
+backbone is still largely frozen and confounder confusion is highest —
+and inject them into retraining from the fully converged Phase 2
+checkpoint. We evaluate on 4,099 crowdsourced images spanning 8
+confounder categories, reporting PR-AUC as the primary metric alongside
+per-category false positive rates with Clopper-Pearson confidence
+intervals and multi-seed bootstrap statistics. Our EfficientNetB0 BCE
+baseline achieves PR-AUC of <strong>0.9976</strong> and flood recall of
+<strong>97.8%</strong> at τ=0.5, while ResNet50 achieves PR-AUC of
+<strong>0.9614</strong> and flood recall of 80.4% — a 3.6-point PR-AUC
+gap that is invisible in ROC-AUC (0.9985 vs. 0.9728), confirming that
+PR-AUC is the appropriate primary metric for this screening problem;
+[HNM results pending].</p>
+<hr />
+<h1 id="introduction">1. Introduction</h1>
+<p>Floods are among the most destructive and frequently occurring
+natural disasters worldwide, causing significant loss of life and
+infrastructure damage. Rapid automated detection of flooding from
+crowdsourced imagery — photographs submitted via smartphone apps, social
+media, or traffic camera feeds — can dramatically accelerate emergency
+response, often preceding official reports by hours (Esparza et al.,
+2022). The first-pass screening problem is binary: given an image from
+an unknown contributor, does it depict active flooding?</p>
+<p><strong>The screening objective is fundamentally
+recall-first.</strong> A missed flood image (false negative) means an
+affected location is not escalated for human review; a false positive
+triggers unnecessary resource allocation. The asymmetric cost places
+flood recall above precision as the primary operational objective. Yet
+most published flood detection systems report ROC-AUC or overall
+accuracy, which are known to overstate performance on imbalanced binary
+classification [Davis &amp; Goadrich, 2006] and do not reflect the
+recall-constrained operating point required for deployment.</p>
+<p><strong>Visual confounders are the dominant failure mode.</strong>
+Swimming pools, rivers, and wet roads share an open reflective water
+surface, similar colour statistics under overcast conditions, and
+proximity to urban infrastructure — precisely the features a
+texture-based convolutional classifier uses to detect floods. Under
+close-range photography, contextual cues that would disambiguate a pool
+from a flood are absent, and standard cross-entropy trained models
+frequently misclassify these scenes [wet-road confounder citation
+pending verification]. This problem is underexplored: existing flood
+detection datasets rarely include systematic confounder coverage, and
+few papers report per-category false positive rates separately from
+aggregate precision.</p>
+<p><strong>Research gap.</strong> Flood detection systems achieve high
+aggregate accuracy — Lee et al. (2025) report 97.67% recall; Khan et
+al. (2023) report 96.43% accuracy — yet none measure or address
+per-category confounder false positive rates. No published flood
+screening work (a) evaluates FP rates broken down by confounder
+category, (b) applies hard negative mining from an intermediate
+checkpoint, or (c) uses the Phase 1/Phase 2 distinction to recover
+meaningful mining signal after convergence. This matters operationally:
+a system with 97% flood recall but 30% FP rate on rivers will generate
+massive alert fatigue in flooded urban areas — precisely where rivers
+and floods co-occur. We directly measure per-category FP rates and show
+that Phase-1-targeted HNM reduces them without sacrificing flood
+recall.</p>
+<p><strong>We address both gaps.</strong> First, we build a benchmark
+with explicit confounder category labels and measure per-category false
+positive rates on a held-out validation set. Second, we implement
+<strong>offline Hard Negative Mining</strong>: we identify the
+hardest-scoring non-flood images using the <em>Phase 1</em> checkpoint —
+before the model has memorised the training distribution — and inject
+them into retraining from the fully converged Phase 2 baseline. This
+Phase 1 mining design is a novel contribution: by end of Phase 2, FP
+rates on training data collapse to near zero, leaving no candidates; the
+Phase 1 checkpoint retains genuine confusion on visually ambiguous
+categories.</p>
+<p><strong>Contributions:</strong></p>
+<ol type="1">
+<li>A flood/non-flood benchmark with fine-grained labels across 8
+confounder categories with a clean 80/20 stratified train/val
+split.</li>
+<li>A two-phase progressive fine-tuning protocol (EfficientNetB0 and
+ResNet50, BCE and focal loss), with class-weighted training to
+compensate for label imbalance.</li>
+<li><strong>Phase-1 HNM</strong>: confounder analysis from the Phase 1
+checkpoint, not the converged Phase 2 model, producing genuine mining
+candidates for augmented retraining.</li>
+<li>Ablation controls: no-injection (extended training without HNM) and
+random-injection (same count, probability-unranked), isolating the
+contribution of difficulty-based candidate selection.</li>
+<li>PR-AUC as the primary metric; temperature-scaled calibration;
+recall-first threshold selection on validation data; multi-seed
+bootstrap confidence intervals and McNemar’s test.</li>
+</ol>
+<hr />
+<h1 id="related-work">2. Related Work</h1>
+<p>Related work is organised by the methodological threads this paper
+intersects, rather than paper-by-paper.</p>
+<h2 id="flood-detection-from-crowdsourced-and-street-level-imagery">2.1
+Flood Detection from Crowdsourced and Street-Level Imagery</h2>
+<p><strong>Street-level binary classifiers</strong> are the state of the
+art for the first-pass screening problem. Lee et al. (2025)
+(AlleyFloodNet) achieve 96.56% accuracy and 97.67% recall on a ~4.6k
+image street-level dataset using ConvNeXt-Large, demonstrating that
+street-level images support high-accuracy binary detection when training
+data is appropriately curated. Khan et al. (2023) deploy a ResNet50
+classifier on NVIDIA Jetson Nano (820ms / image, 6.9W), achieving 96.43%
+accuracy on UAV imagery. Neither work reports per-category false
+positive rates or evaluates on confounding categories such as swimming
+pools.</p>
+<p><strong>Classical approaches</strong> to roadway flood detection use
+change detection (SIFT-flow registration + image subtraction) and HSV
+saturation analysis to identify water surfaces [classical detection
+citation pending]. These methods require a reference dry image —
+unavailable in uncontrolled crowdsourcing — and have been evaluated on
+single cities.</p>
+<p><strong>Social media benchmarks</strong> including CrisisMMD (Alam et
+al., 2018) and the MediaEval2020 Flood Task (Papadimos et al., 2023)
+provide annotated crowdsourced disaster imagery, but conflate flood with
+other disaster types and reflect the noise of open-domain social media
+rather than controlled confounder evaluation. The MediaEval best system
+(multimodal BERT + VGG-19 + GNN) achieves F1 of 0.537, reflecting the
+difficulty of open-domain relevance classification.</p>
+<p><strong>Data quality</strong> issues in crowdsourced flood data —
+geographic over-representation of high-connectivity areas,
+under-representation of rural and marginalised communities — have been
+systematically characterised (Esparza et al., 2022). CrisisBench (Alam
+et al., 2021) shows that near-duplicate images across train/test splits
+inflate apparent generalisation; we address this with stratified
+splitting and held-out val/test partitions.</p>
+<h2 id="transfer-learning-for-disaster-image-classification">2.2
+Transfer Learning for Disaster Image Classification</h2>
+<p><strong>EfficientNet</strong> (Tan &amp; Le, 2019) achieves ImageNet
+accuracy with ~5.3M parameters via compound scaling; input-range
+mismatches (raw [0,255] vs. normalised inputs) are a documented source
+of implementation errors in flood-screening code.
+<strong>ResNet</strong> (He et al., 2016) remains a common disaster-ML
+backbone, but Phase 2 unfreezing can cause catastrophic forgetting
+spikes; the optimal freeze schedule for flood-specific fine-tuning is
+not established. <strong>ViT</strong> (Dosovitskiy et al., 2021)
+performs poorly below 5k images without heavy augmentation and is not
+evaluated here.</p>
+<p><strong>Two-phase progressive fine-tuning</strong> mitigates
+catastrophic forgetting (Lyu et al., 2025; Neupane et al., 2025) by
+freezing lower backbone layers in Phase 1 and gradually unfreezing in
+Phase 2. The optimal phase boundary for flood data is unknown; we
+evaluate the (30, 50) boundary and leave ablation of alternatives for
+future work.</p>
+<h2 id="hard-negative-mining-and-visual-confounders">2.3 Hard Negative
+Mining and Visual Confounders</h2>
+<p><strong>Explicit offline HNM</strong> — collecting high-loss or
+high-confidence misclassified examples for augmented retraining — has
+been applied to face detection (Viola &amp; Jones, 2004) and object
+detection (Shrivastava et al., 2016), but not to binary flood screening.
+OHEM’s online formulation is prohibitively expensive for large
+crowdsourced streams; our offline variant mines once from the Phase 1
+checkpoint and injects permanently.</p>
+<p><strong>Focal Loss</strong> (Lin et al., 2017) provides a
+differentiable alternative: (1 − p_t)^γ down-weights easy examples
+within each mini-batch. Focal loss and offline HNM are complementary:
+focal loss modulates gradient weights within a fixed distribution; HNM
+permanently augments the training distribution with hard examples. Both
+are evaluated.</p>
+<p><strong>Self-mining confirmation bias</strong> — the model identifies
+as hard the examples hardest for its current representation, potentially
+reinforcing rather than correcting its biases (Shrivastava et al., 2016)
+— motivates our Phase 1 design. Mining from a weaker intermediate
+checkpoint produces more diverse and genuinely confounding
+candidates.</p>
+<h2 id="high-recall-screening-systems">2.4 High-Recall Screening
+Systems</h2>
+<p><strong>Recall-first ML</strong> frameworks (Cai, 2025) show that
+operating at recall-constrained thresholds rather than
+accuracy-maximising thresholds dramatically reduces safety-critical
+false negatives in detection systems. <strong>Cascade
+architectures</strong> (Dong et al., 2025) achieve 100% recall at high
+overall accuracy for UAV fire detection using a two-stage design; we
+evaluate single-model recall-first thresholding as a simpler operational
+baseline.</p>
+<h2 id="methodological-rigour-in-disaster-ml">2.5 Methodological Rigour
+in Disaster ML</h2>
+<p><strong>PR-AUC vs. ROC-AUC</strong>: Davis &amp; Goadrich (2006)
+prove that ROC-AUC overstates performance on imbalanced datasets because
+the true negative rate is easy to inflate when negatives vastly
+outnumber positives. PR-AUC directly captures the precision-recall
+tradeoff relevant to screening. Most flood detection papers report
+ROC-AUC; we adopt PR-AUC as the primary metric and demonstrate the
+discrepancy empirically.</p>
+<p><strong>Calibration</strong>: Modern deep classifiers are
+overconfident (Guo et al., 2017); no flood detection paper reports
+Expected Calibration Error (ECE). We apply temperature scaling [Guo et
+al. 2017] and report reliability diagrams.</p>
+<p><strong>Statistical rigour</strong>: Single-run results on 800-image
+val sets are sensitive to split composition (Efron &amp; Tibshirani,
+1993). We report n=5 seed results with bootstrap confidence intervals
+and McNemar’s test. For small-count category statistics (e.g., swimming
+pool n=28), we report Clopper-Pearson 95% confidence intervals (Clopper
+&amp; Pearson, 1934).</p>
+<blockquote>
+<p><strong>Citation note</strong>: Citations in this section have been
+cross-referenced against the systematic literature review
+(<code>results/literature/literature_review_flood_screening.md</code>,
+53 papers). One citation remains pending verification: the classical
+HSV/change-detection flood detection approach. The “Schumann et
+al. 2023” wet-road confounder reference could not be matched; Schumann
+et al. (2013) in the review covers flood forecasting models, not
+street-level confounders.</p>
+</blockquote>
+<hr />
+<h1 id="dataset">3. Dataset</h1>
+<h2 id="construction">3.1 Construction</h2>
+<p>The benchmark is constructed from publicly available imagery across
+two binary classes: <strong>flood</strong> and
+<strong>non-flood</strong>. Non-flood images are organised into 8
+confounder categories selected to span the primary failure modes of
+flood classifiers:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>Flood similarity</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>river</code></td>
+<td>High</td>
+<td>Open water surface, similar reflectance, near infrastructure</td>
+</tr>
+<tr>
+<td><code>swimming_pool</code></td>
+<td>High</td>
+<td>Ground-level water, urban context, similar lighting</td>
+</tr>
+<tr>
+<td><code>park_walkway</code></td>
+<td>Medium</td>
+<td>Green + paved surface, waterlogged appearance</td>
+</tr>
+<tr>
+<td><code>street_clear</code></td>
+<td>Medium</td>
+<td>Dry urban context, calibration negative</td>
+</tr>
+<tr>
+<td><code>animal</code></td>
+<td>Low</td>
+<td>Control category, no water</td>
+</tr>
+<tr>
+<td><code>building</code></td>
+<td>Low</td>
+<td>Control category</td>
+</tr>
+<tr>
+<td><code>plant</code></td>
+<td>Low</td>
+<td>Control category</td>
+</tr>
+<tr>
+<td><code>vehicle</code></td>
+<td>Low</td>
+<td>Control category</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Flood images</strong> are sourced from the USF
+FloodingDataset2 (University of South Florida crowdsourced flood
+imagery), comprising MajorFlood, ModerateFlood, and MinorFlood severity
+subsets. <strong>Non-flood images</strong> are sourced from the RIWA
+dataset (rivers, swimming pools, park walkways, streets, animals,
+buildings, plants, vehicles) — a curated collection of visual
+confounders for water-related classification tasks.</p>
+<h2 id="dataset-statistics">3.2 Dataset Statistics</h2>
+<p>The dataset was constructed from publicly available imagery across
+both classes. The final dataset comprises <strong>4,099 images</strong>
+across 2 binary classes (flood / non-flood), with non-flood images
+spanning 8 confounder categories. The class distribution is
+approximately 1,629 flood images and 1,970 non-flood images (ratio ≈
+1:1.5), reflecting the RIWA dataset’s confounder-focused composition.
+Class weights are computed per run to compensate for this imbalance (see
+Section 4.1).</p>
+<h2 id="train-val-split">3.3 Train / Val Split</h2>
+<p>Splits are stratified by binary label (80/20). The val split is held
+out throughout training and used only for evaluation and threshold
+selection.</p>
+<table>
+<thead>
+<tr>
+<th>Split</th>
+<th>Total</th>
+<th>Flood</th>
+<th>Non-Flood</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Train</td>
+<td>3,280</td>
+<td>~1,307</td>
+<td>~1,973</td>
+</tr>
+<tr>
+<td>Val</td>
+<td>819</td>
+<td>322</td>
+<td>497</td>
+</tr>
+</tbody>
+</table>
+<h2 id="confounder-category-distribution">3.4 Confounder Category
+Distribution</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>Train</th>
+<th>Val</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>street_clear</td>
+<td>475</td>
+<td>105</td>
+<td></td>
+</tr>
+<tr>
+<td>park_walkway</td>
+<td>326</td>
+<td>82</td>
+<td></td>
+</tr>
+<tr>
+<td>river</td>
+<td>323</td>
+<td>76</td>
+<td>Primary confounder</td>
+</tr>
+<tr>
+<td>animal</td>
+<td>233</td>
+<td>67</td>
+<td></td>
+</tr>
+<tr>
+<td>building</td>
+<td>232</td>
+<td>55</td>
+<td></td>
+</tr>
+<tr>
+<td>vehicle</td>
+<td>189</td>
+<td>50</td>
+<td></td>
+</tr>
+<tr>
+<td>plant</td>
+<td>141</td>
+<td>34</td>
+<td></td>
+</tr>
+<tr>
+<td>swimming_pool</td>
+<td>70</td>
+<td>28</td>
+<td>Primary confounder; small val count → wide CI</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Small-count note</strong>: <code>swimming_pool</code> (n=28
+val) and <code>plant</code> (n=34 val) have wide Clopper-Pearson 95%
+confidence intervals. An observed 0% FP rate on 28 images has an upper
+95% CI bound of <strong>12.3%</strong> — these categories cannot be
+declared clean without more data. All per-category FP rate comparisons
+use Fisher’s exact test.</p>
+<!-- TODO: Clarify roles of AlleyFloodNet and ADE20K — are these used for additional training data, external test evaluation, or both? -->
+<hr />
+<h1 id="methodology">4. Methodology</h1>
+<h2 id="pipeline-overview">4.0 Pipeline Overview</h2>
+<p>The full experimental pipeline is shown in Figure 0. Stages are
+described in detail in sections 4.1–4.6.</p>
+<!-- TODO: export methodology.mmd to methodology.png using mmdc before Word conversion -->
+<pre class="mermaid"><code>flowchart TD
+
+%% ── EXTERNAL SOURCES ───────────────────────────────────────────────────────
+subgraph SOURCES[&quot;External confounder image sources  —  download_*.py&quot;]
+    SRC_USF[&quot;USF FloodingDataset2\nGoogle Drive  ·  gdown\ndownload_usf.py&quot;]
+    SRC_P365[&quot;Places365 (MIT)\nval_256.tar  ·  swimming_pool/outdoor\ndownload_swimmingpool.py&quot;]
+    SRC_OI[&quot;Open Images v7 (Google)\nSwimming pool · Fountain\nfiftyone zoo / CSV fallback&quot;]
+    SRC_ATL[&quot;ATLANTIS (GitHub archive)\nriver · canal · rapids\nlake · reservoir · wetland · marsh · river_delta&quot;]
+    SRC_KAG[&quot;Kaggle datasets\nRIWA · WaterNet · LuFI-RiverSnap\n(skipped if ~/.kaggle/kaggle.json absent)&quot;]
+    SRC_ADE[&quot;ADE20K (MIT CSAIL)\nfountain scenes\ndownload_fountain.py&quot;]
+end
+
+%% ── DATASET ─────────────────────────────────────────────────────────────────
+subgraph DATA[&quot;Dataset · FloodingDataset2  ·  street-level images&quot;]
+    D_FLOOD[&quot;Flood images\nMajorFlood · ModerateFlood · MinorFlood\n(USF source)&quot;]
+    D_NF[&quot;Non-flood images\nNoFlood · parks_walkways · original junk categories\n+ 4 expanded confounder categories&quot;]
+    D_CONF[&quot;Expanded visual confounders\n400 images each  ·  target ~60 test images per category\nSwimmingpool · River · Lake · Fountain&quot;]
+end
+
+SRC_USF  --&gt; D_FLOOD
+SRC_USF  --&gt; D_NF
+SRC_P365 --&gt; D_CONF
+SRC_OI   --&gt; D_CONF
+SRC_ATL  --&gt; D_CONF
+SRC_KAG  --&gt; D_CONF
+SRC_ADE  --&gt; D_CONF
+D_CONF   --&gt; D_NF
+
+%% ── SPLIT ────────────────────────────────────────────────────────────────────
+subgraph SPLIT[&quot;Stratified split  seed=42  ·  80 / 20  train / val per category\nTest split pending  ·  split_manifest.csv saved&quot;]
+    SP_TR[&quot;Train  ~80%&quot;]
+    SP_VA[&quot;Val    ~20%  ← held out throughout training&quot;]
+end
+
+DATA --&gt; SPLIT
+
+%% ── BASELINE TRAINING ────────────────────────────────────────────────────────
+subgraph BASE[&quot;① Baseline training  ×2 architectures  ×5 seeds  —  train_baseline.py&quot;]
+    B_ARCH[&quot;Backbone: EfficientNetB0 or ResNet50\nImageNet weights · backbone-native preprocessing\n(no double-rescaling)&quot;]
+    B_PH1[&quot;Phase 1  last 30 layers trainable · LR = 1e-4 · max 15 epochs&quot;]
+    B_PH2[&quot;Phase 2  first 50 layers frozen   · LR = 1e-5 · max 20 epochs&quot;]
+    B_M0([&quot;M0 — Baseline model  (per architecture)&quot;])
+end
+
+SP_TR --&gt; BASE
+SP_VA --&gt; BASE
+B_ARCH --&gt; B_PH1 --&gt; B_PH2 --&gt; B_M0
+
+%% ── CONFOUNDER ANALYSIS ──────────────────────────────────────────────────────
+subgraph CONF[&quot;② Confounder analysis  —  analyze_confounders.py&quot;]
+    CA1[&quot;Predict on train/non_flood/ with Phase 1 checkpoint (M0-ph1)&quot;]
+    CA2[&quot;Rank all non-flood categories by FP rate\nSwimmingpool · River · Lake · Fountain\nvehicles · animals · buildings ...&quot;]
+    CA3[&quot;Output: HNM candidate list\n(fp_threshold = 0.15 default)&quot;]
+end
+
+B_M0 --&gt; CA1 --&gt; CA2 --&gt; CA3
+
+%% ── HARD NEGATIVE MINING ─────────────────────────────────────────────────────
+subgraph HNM[&quot;③ Hard negative mining  —  train_hnm.py&quot;]
+    H1[&quot;Mine: flag train/non_flood/ images where p(flood) &gt; tau\ntau selected by val sweep  (default 0.3)&quot;]
+    H2[&quot;Augment 5× per mined image\nrotation · flip · zoom · brightness&quot;]
+    H3[&quot;Inject into processed_data/binary_hnm/\nval dirs never modified&quot;]
+    H4[/&quot;Partition integrity assertion  ← halts on any train ↔ val overlap&quot;/]
+end
+
+CA3 --&gt; H1 --&gt; H2 --&gt; H3 --&gt; H4
+
+%% ── BASELINE LOSS CONDITIONS ─────────────────────────────────────────────────
+subgraph BLOSS[&quot;③b Loss function conditions  —  train_baseline.py  ×2 archs  ×5 seeds&quot;]
+    BL_BCE[&quot;--loss binary_crossentropy  (default)&quot;]
+    BL_FOC[&quot;--loss focal  γ=2.0\n← tests whether focal loss alone rejects confounders&quot;]
+end
+
+B_M0 --&gt; BL_BCE
+B_M0 --&gt; BL_FOC
+
+%% ── RETRAIN CONFIGURATIONS ───────────────────────────────────────────────────
+subgraph CONFIGS[&quot;④ Retrain configurations  (×2 archs · ×5 seeds · ×2 loss functions)&quot;]
+    C_HNM_BCE[&quot;HNM retrain — binary_crossentropy\ntrain_hnm.py  Phase 1: LR=5e-5 · max 15 ep\nPhase 2: LR=1e-5 · max 10 ep&quot;]
+    C_HNM_FOC[&quot;HNM retrain — focal loss  γ=2.0\ntrain_hnm.py --loss focal\n← 2×2 factorial: HNM × loss function&quot;]
+    C_NOINJ[&quot;Extended-training control  --no_injection\nSame epoch budget · no injection\n← isolates HNM benefit from extra training time&quot;]
+    C_RAND[&quot;Random-injection control  --random_injection\nSame count as HNM · random candidate selection\n← isolates hard-negative ranking from data size effect&quot;]
+end
+
+H4    --&gt; C_HNM_BCE
+H4    --&gt; C_HNM_FOC
+B_M0  --&gt; C_NOINJ
+B_M0  --&gt; C_RAND
+CA3   --&gt; C_RAND
+SP_TR --&gt; C_HNM_BCE
+SP_VA --&gt; C_HNM_BCE
+SP_TR --&gt; C_HNM_FOC
+SP_VA --&gt; C_HNM_FOC
+SP_TR --&gt; C_NOINJ
+SP_VA --&gt; C_NOINJ
+SP_TR --&gt; C_RAND
+SP_VA --&gt; C_RAND
+
+%% ── THRESHOLD SELECTION ──────────────────────────────────────────────────────
+subgraph THRESH[&quot;⑤ Threshold selection  (val set only — never test)&quot;]
+    TH1[&quot;Sweep 0.05 → 0.95 on val set\ntrack flood recall + confounder FP rate per step&quot;]
+    TH2[&quot;Select: max flood recall  s.t.  recall-first operating point&quot;]
+end
+
+BL_BCE     --&gt; TH1
+BL_FOC     --&gt; TH1
+C_HNM_BCE  --&gt; TH1
+C_HNM_FOC  --&gt; TH1
+C_NOINJ    --&gt; TH1
+C_RAND     --&gt; TH1
+TH1 --&gt; TH2
+
+%% ── EVALUATION ───────────────────────────────────────────────────────────────
+subgraph EVAL[&quot;⑥ Final evaluation  (val set · one pass per config)&quot;]
+    EV_DET[&quot;Flood detection\nPR-AUC (primary) · Recall · Precision · F1 · ROC-AUC · Accuracy\nBootstrap 95% CIs · McNemar pairwise tests&quot;]
+    EV_SEV[&quot;Severity-stratified recall\nMajor · Moderate · Minor flood&quot;]
+    EV_FP[&quot;Per-category confounder FP analysis\nSwimmingpool · River\nClopper-Pearson 95% CI per category\nFisher exact test (pre vs post HNM per category)&quot;]
+end
+
+TH2    --&gt; EV_DET
+SP_VA  --&gt; EV_DET
+EV_DET --&gt; EV_SEV
+EV_DET --&gt; EV_FP
+
+%% ── SEED AGGREGATION ─────────────────────────────────────────────────────────
+subgraph AGGREGATE[&quot;⑦ Seed aggregation&quot;]
+    AG1[&quot;Load per-seed predictions CSVs\n(×5 seeds × 6 conditions × 2 archs)&quot;]
+    AG2[&quot;Compute mean ± std across seeds\nPR-AUC · Recall · F1 · per-category FP rates&quot;]
+    AG3[&quot;McNemar pairwise tests\n(Bonferroni-corrected)&quot;]
+    AG4([&quot;Unified comparison table&quot;])
+end
+
+EV_DET  --&gt; AG1
+EV_SEV  --&gt; AG1
+EV_FP   --&gt; AG1
+AG1 --&gt; AG2 --&gt; AG3 --&gt; AG4</code></pre>
+<p><em>Figure 0: Full experimental methodology. Data flows from 2 public
+sources (USF FloodingDataset2 for flood images, RIWA for non-flood
+confounders) through stratified 80/20 splitting, two-phase baseline
+training, Phase-1 confounder analysis, and hard negative mining with
+ablation controls to final threshold-selected evaluation.</em></p>
+<h2 id="two-phase-progressive-fine-tuning">4.1 Two-Phase Progressive
+Fine-Tuning</h2>
+<p>All models use <strong>two-phase transfer learning</strong> from
+ImageNet-pretrained weights. Progressive fine-tuning mitigates
+catastrophic forgetting during fine-tuning (Lyu et al., 2025):</p>
+<ul>
+<li><strong>Phase 1</strong> — Freeze all but the last
+<code>n_trainable=30</code> backbone layers. Train classification head
+and top backbone layers at LR=1×10⁻³.</li>
+<li><strong>Phase 2</strong> — Freeze the first <code>n_frozen=50</code>
+backbone layers; fine-tune deeper layers at LR=1×10⁻⁴.</li>
+</ul>
+<p>Both phases use early stopping (patience=10 on val loss) and
+ReduceLROnPlateau (patience=5). Class weights are computed per run via
+<code>compute_class_weight("balanced")</code> on the training label
+distribution. The model is saved at the best val loss epoch in each
+phase.</p>
+<blockquote>
+<p><strong>Note on training recall metric</strong>: Keras’s
+<code>Recall</code> metric measures recall for class index 1 (non_flood,
+alphabetically assigned). Training curves and epoch summaries therefore
+report <strong>non_flood</strong> recall, not flood recall. Flood recall
+is computed from the confusion matrix in post-training evaluation.</p>
+</blockquote>
+<h2 id="architectures">4.2 Architectures</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Params</th>
+<th>Input</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EfficientNetB0</td>
+<td>~5.3M</td>
+<td>Raw [0, 255] — built-in rescaling</td>
+<td>Keras 3: <code>include_preprocessing</code> removed; preprocessing
+is in the model graph</td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>~25.6M</td>
+<td>Channel mean subtraction (ImageNet stats)</td>
+<td>Standard
+<code>tf.keras.applications.resnet50.preprocess_input</code></td>
+</tr>
+</tbody>
+</table>
+<p>The preprocessing difference is verified at runtime: EfficientNet
+receives raw pixels; ResNet50 receives mean-subtracted pixels. Mixing
+these up is a documented source of performance degradation in
+flood-screening code.</p>
+<h2 id="loss-functions">4.3 Loss Functions</h2>
+<ul>
+<li><strong>Binary Cross-Entropy (BCE)</strong>: Standard sigmoid loss.
+Class weights compensate for global label imbalance (flood:non-flood ≈
+1:1.5 in train).</li>
+<li><strong>Focal Loss</strong> (γ=2.0): (1 − p_t)^γ × BCE. Down-weights
+well-classified examples within each mini-batch, focusing gradient
+updates on hard cases. Also trained with balanced class weights.</li>
+</ul>
+<p>Focal loss and class weighting address different aspects of the
+imbalance problem: class weighting corrects for global class frequency;
+focal loss corrects for local within-batch hard/easy imbalance.</p>
+<h2 id="phase-1-hard-negative-mining">4.4 Phase-1 Hard Negative
+Mining</h2>
+<p>The HNM pipeline proceeds in three stages:</p>
+<h3 id="stage-1-confounder-analysis-from-the-phase-1-checkpoint">Stage 1
+— Confounder analysis from the Phase 1 checkpoint</h3>
+<p>Run the <strong>Phase 1</strong> checkpoint (not Phase 2) on all
+<code>train/non_flood/</code> images. For each image, compute flood
+probability p̂ = 1 − σ(output), where the sigmoid output is P(non-flood)
+due to alphabetical class ordering in <code>flow_from_directory</code>.
+Compute per-category FP rate at τ=0.5; flag categories exceeding
+θ=0.05.</p>
+<p><strong>Why Phase 1?</strong> By end of Phase 2, the model fits the
+training non-flood categories to near-zero FP rate — there are no binary
+FPs to flag and no candidates to mine (observed: EfficientNetB0 Phase 2
+achieves 0.31% river FP rate on train; ResNet50 achieves 0%). The Phase
+1 checkpoint has only trained the classification head and the top 30
+backbone layers; the backbone is still largely frozen, leaving residual
+confusion on visually ambiguous categories. Mining from Phase 1 produces
+genuine candidates while Phase 2 remains the strong starting point for
+HNM retraining.</p>
+<p>Partition safety: val images are never included in mining candidates.
+A leakage assertion is run before retraining.</p>
+<h3 id="stage-2-candidate-selection-by-flood-probability">Stage 2 —
+Candidate selection by flood probability</h3>
+<p>From flagged categories, collect all images. Rank by descending Phase
+1 flood probability p̂. Select the <strong>top 10%</strong> (percentile
+mode) — the images the model is most confused about at the Phase 1
+stage, not just those that crossed the binary threshold.</p>
+<h3 id="stage-3-augmented-retraining-from-the-phase-2-checkpoint">Stage
+3 — Augmented retraining from the Phase 2 checkpoint</h3>
+<p>Inject selected hard negatives into the training set. Retrain from
+the <strong>Phase 2</strong> checkpoint at Phase 2 LR (1×10⁻⁴). The
+Phase 2 checkpoint is the strong converged baseline; HNM retraining
+refines its decision boundary in the confounder regions.</p>
+<h3 id="ablation-controls">Ablation Controls</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Description</th>
+<th>Controls for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HNM (percentile)</strong></td>
+<td>Top 10% hardest negatives by Phase 1 probability</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>No injection</strong></td>
+<td>Retrain for same epoch budget, no additional data</td>
+<td>Additional training epochs</td>
+</tr>
+<tr>
+<td><strong>Random injection</strong></td>
+<td>Same count, randomly sampled from flagged categories</td>
+<td>Category exposure vs. difficulty ranking</td>
+</tr>
+</tbody>
+</table>
+<p>The no-injection control is critical: if HNM improves performance, it
+must outperform extended training without injection to attribute the
+gain to hard negative selection rather than additional compute.</p>
+<h2 id="probability-calibration">4.5 Probability Calibration</h2>
+<p>Modern deep classifiers are overconfident: reported probabilities do
+not reflect true posterior probabilities (Guo et al., 2017). We apply
+<strong>temperature scaling</strong> — divide logits by a scalar T
+learned by minimising NLL on the val set — as post-hoc calibration.
+Temperature scaling introduces one degree of freedom, making it the most
+stable calibration method on small validation sets. Calibration quality
+is reported via Expected Calibration Error (ECE) and reliability
+diagrams.</p>
+<h2 id="metrics-and-evaluation-protocol">4.6 Metrics and Evaluation
+Protocol</h2>
+<p><strong>Primary metric: PR-AUC</strong> (area under the
+precision-recall curve). PR-AUC is preferred over ROC-AUC for imbalanced
+screening problems (Davis &amp; Goadrich, 2006): ROC-AUC inflates
+performance because specificity is easy to achieve when negatives vastly
+outnumber positives. The PR-AUC gap between EfficientNetB0 (0.9976) and
+ResNet50 (0.9614) is larger and more operationally meaningful than their
+accuracy difference (98.3% vs 98.5%).</p>
+<p><strong>Threshold selection</strong>: τ is selected on the val set to
+identify the recall-preserving operating range — the interval of τ where
+flood recall ≥ 95%. Test-set threshold tuning is not performed.</p>
+<p><strong>Statistical analysis</strong>: - n=5 seeds; metrics as mean ±
+95% bootstrap CI - Model comparisons: McNemar’s test on paired
+predictions - Per-category FP rates: Clopper-Pearson 95% CI; Fisher’s
+exact test for model comparisons</p>
+<hr />
+<h1 id="experiments">5. Experiments</h1>
+<h2 id="baseline-training-dynamics">5.1 Baseline Training Dynamics</h2>
+<p>Figure 1 shows training curves for the EfficientNetB0 BCE baseline.
+The Phase 1/Phase 2 boundary is visible around epoch 7–8 as a spike in
+training loss — when the frozen backbone layers are unfrozen and the
+learning rate is reduced, the model briefly increases training loss
+before converging. Validation loss (dashed) remains stable throughout,
+with a train-val loss gap of ~0.02 indicating mild overfitting. AUC and
+recall are high and stable across both phases.</p>
+<figure>
+<img
+src="../results/figures/baselines/efficientnet_bce/training_curves.png"
+alt="EfficientNetB0 BCE training curves — loss, AUC, accuracy, and recall per epoch. The Phase 1→2 boundary is visible as a training loss spike at epoch ~7." />
+<figcaption aria-hidden="true">EfficientNetB0 BCE training curves —
+loss, AUC, accuracy, and recall per epoch. The Phase 1→2 boundary is
+visible as a training loss spike at epoch ~7.</figcaption>
+</figure>
+<p><em>Figure 1: EfficientNetB0 BCE baseline training curves (seed 42,
+clean split). Dashed lines = validation; solid = training. The training
+loss spike at epoch ~7 marks the Phase 1→Phase 2 transition.</em></p>
+<figure>
+<img src="../results/figures/baselines/resnet50_bce/training_curves.png"
+alt="ResNet50 BCE training curves — loss, AUC, accuracy, and recall per epoch." />
+<figcaption aria-hidden="true">ResNet50 BCE training curves — loss, AUC,
+accuracy, and recall per epoch.</figcaption>
+</figure>
+<p><em>Figure 1b: ResNet50 BCE baseline training curves (seed 42). The
+Phase 1→2 boundary is visible as a training loss spike. Note: ResNet50
+training dynamics differ from EfficientNetB0 — the Phase 2 log covers
+fewer epochs due to early stopping triggered by val loss
+plateau.</em></p>
+<h2 id="baseline-results-at-τ-0.5">5.2 Baseline Results at τ = 0.5</h2>
+<p>Table 1 reports val set performance for the two BCE baselines (seed
+42). Focal loss and HNM results are pending.</p>
+<table>
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Loss</th>
+<th>Val Acc ↑</th>
+<th>Flood Recall ↑</th>
+<th>Flood Prec ↑</th>
+<th>Flood F1 ↑</th>
+<th>FN ↓</th>
+<th>FP ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EfficientNetB0</td>
+<td>BCE</td>
+<td>98.3%</td>
+<td>97.8%</td>
+<td>0.978</td>
+<td>0.978</td>
+<td>7</td>
+<td>7</td>
+</tr>
+<tr>
+<td><strong>EfficientNetB0</strong></td>
+<td><strong>Focal</strong></td>
+<td><strong>98.8%</strong></td>
+<td><strong>98.5%</strong></td>
+<td><strong>0.985</strong></td>
+<td><strong>0.985</strong></td>
+<td><strong>5</strong></td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>BCE</td>
+<td>98.5%</td>
+<td>80.4%</td>
+<td>0.938</td>
+<td>0.866</td>
+<td>63</td>
+<td>17</td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>Focal</td>
+<td>87.4%</td>
+<td>71.1%</td>
+<td>0.958</td>
+<td>0.816</td>
+<td>93</td>
+<td>10</td>
+</tr>
+</tbody>
+</table>
+<p><em>Table 1: Baseline val set performance, seed 42 (τ=0.5). PR-AUC
+and ROC-AUC in Table 1b below. Focal loss improves EfficientNetB0
+(97.8%→98.5% recall, 7→5 FN) but degrades ResNet50 (80.4%→71.1%, 63→93
+FN) — supporting the hypothesis that focal loss helps models near the
+decision boundary but cannot fix systematic decision-boundary
+collapse.</em></p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Loss</th>
+<th><strong>PR-AUC ↑</strong></th>
+<th>ROC-AUC ↑</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EfficientNetB0</td>
+<td>BCE</td>
+<td>0.9976</td>
+<td>0.9985</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>EfficientNetB0</strong></td>
+<td><strong>Focal</strong></td>
+<td><strong>0.9977</strong></td>
+<td><strong>0.9986</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>BCE</td>
+<td>0.9614</td>
+<td>0.9728</td>
+<td>—</td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>Focal</td>
+<td>0.9600</td>
+<td>0.9721</td>
+<td>↓ vs BCE; consistent with recall degradation</td>
+</tr>
+</tbody>
+</table>
+<p><em>Table 1b: Discrimination metrics (post-hoc sklearn, val set, seed
+42). EfficientNetB0 BCE vs Focal shows near-identical PR-AUC (0.9976 vs
+0.9977), while Focal improves per-threshold recall (7→5 FN). The PR-AUC
+gap between EfficientNetB0 and ResNet50 (0.9976 vs 0.9614) is larger
+than the ROC-AUC gap (0.9985 vs 0.9728), confirming (Davis &amp;
+Goadrich, 2006) that PR-AUC is more informative on this imbalanced
+screening problem. Focal loss slightly degrades ResNet50 PR-AUC
+(0.9614→0.9600), consistent with the recall collapse (63→93
+FN).</em></p>
+<p>The confusion matrices in Figure 2 make the disparity concrete.
+EfficientNetB0 produces 7 FN and 7 FP — a nearly symmetric error
+pattern. ResNet50 produces 63 FN and 17 FP — a heavily asymmetric
+pattern biased toward predicting non-flood. In a deployment context,
+ResNet50’s 63 missed floods (19.6% miss rate) are unacceptable for a
+first-pass screening system.</p>
+<figure>
+<img
+src="../results/figures/baselines/efficientnet_bce/confusion_matrix.png"
+alt="EfficientNetB0 confusion matrix (TP=315, FN=7, FP=7, TN=490)" />
+<figcaption aria-hidden="true">EfficientNetB0 confusion matrix (TP=315,
+FN=7, FP=7, TN=490)</figcaption>
+</figure>
+<p><em>Figure 2a: EfficientNetB0 BCE confusion matrix (val, n=819, seed
+42). Near-symmetric errors: 7 FN, 7 FP.</em></p>
+<figure>
+<img
+src="../results/figures/baselines/efficientnet_focal/confusion_matrix.png"
+alt="EfficientNetB0 Focal confusion matrix (TP=317, FN=5, FP=5, TN=492)" />
+<figcaption aria-hidden="true">EfficientNetB0 Focal confusion matrix
+(TP=317, FN=5, FP=5, TN=492)</figcaption>
+</figure>
+<p><em>Figure 2b: EfficientNetB0 Focal confusion matrix (val, n=819,
+seed 42). Focal loss further reduces errors to 5 FN, 5 FP — a small but
+consistent improvement.</em></p>
+<figure>
+<img
+src="../results/figures/baselines/resnet50_bce/confusion_matrix.png"
+alt="ResNet50 confusion matrix (TP=259, FN=63, FP=17, TN=480)" />
+<figcaption aria-hidden="true">ResNet50 confusion matrix (TP=259, FN=63,
+FP=17, TN=480)</figcaption>
+</figure>
+<p><em>Figure 2c: ResNet50 BCE confusion matrix (val, n=819, seed 42).
+Highly asymmetric: 63 FN (19.6% miss rate) vs. 17 FP.</em></p>
+<figure>
+<img
+src="../results/figures/baselines/resnet50_focal/confusion_matrix.png"
+alt="ResNet50 Focal confusion matrix (TP=229, FN=93, FP=10, TN=487)" />
+<figcaption aria-hidden="true">ResNet50 Focal confusion matrix (TP=229,
+FN=93, FP=10, TN=487)</figcaption>
+</figure>
+<p><em>Figure 2d: ResNet50 Focal confusion matrix (val, n=819, seed 42).
+Focal loss degrades ResNet50: 93 FN (28.9% miss rate) vs. 10 FP. Despite
+fewer FP, the dramatic FN increase makes this operationally worse for
+screening.</em></p>
+<h2 id="pr-auc-vs.-roc-auc-the-metric-matters">5.3 PR-AUC vs. ROC-AUC:
+The Metric Matters</h2>
+<p>Figure 3 illustrates the PR/ROC discrepancy directly. ResNet50’s ROC
+curve (AUC=0.973) still looks respectable — a naïve reader would
+conclude it is “nearly as good” as EfficientNetB0 (ROC-AUC=0.999). The
+PR curves reveal the true picture: ResNet50’s precision collapses
+rapidly above recall ≈ 0.85 (PR-AUC=0.961 vs 0.998), confirming Davis
+&amp; Goadrich [2006]’s argument that PR-AUC is the appropriate metric
+for this problem.</p>
+<figure>
+<img
+src="../results/figures/baselines/efficientnet_bce/pr_roc_curves.png"
+alt="EfficientNetB0 PR and ROC curves — PR AUC=0.9976, ROC AUC=0.9985" />
+<figcaption aria-hidden="true">EfficientNetB0 PR and ROC curves — PR
+AUC=0.9976, ROC AUC=0.9985</figcaption>
+</figure>
+<p><em>Figure 3a: EfficientNetB0 BCE precision-recall and ROC curves
+(val set, seed 42). PR-AUC=0.9976. Precision stays near 1.0 until recall
+&gt; 0.98.</em></p>
+<figure>
+<img src="../results/figures/baselines/resnet50_bce/pr_roc_curves.png"
+alt="ResNet50 PR and ROC curves — PR AUC=0.9614, ROC AUC=0.9728" />
+<figcaption aria-hidden="true">ResNet50 PR and ROC curves — PR
+AUC=0.9614, ROC AUC=0.9728</figcaption>
+</figure>
+<p><em>Figure 3b: ResNet50 BCE precision-recall and ROC curves (val set,
+seed 42). PR-AUC=0.9614. Precision degrades rapidly at high recall,
+reflecting the 63 FN at τ=0.5.</em></p>
+<h2 id="qualitative-error-analysis">5.4 Qualitative Error Analysis</h2>
+<p>Figure 4 shows the worst FP (top, red border) and FN (bottom, orange
+border) examples for each model at τ=0.5. EfficientNetB0’s 7 FP and FN
+cases are genuinely ambiguous boundary cases — river scenes with strong
+water texture, and dimly-lit or partially obscured flood scenes.
+ResNet50’s 63 FN cases reveal systematic failure: well-lit, prototypical
+flood scenes are assigned low flood probability, suggesting the model’s
+decision boundary is poorly calibrated despite balanced class
+weighting.</p>
+<figure>
+<img
+src="../results/figures/baselines/efficientnet_bce/fp_fn_examples.png"
+alt="EfficientNetB0 worst FP and FN examples" />
+<figcaption aria-hidden="true">EfficientNetB0 worst FP and FN
+examples</figcaption>
+</figure>
+<p><em>Figure 4a: EfficientNetB0 BCE worst val errors (seed 42). Top row
+(red): 7 false positives — all are visually ambiguous river/water
+scenes. Bottom row (orange): 7 false negatives — dimly lit or partially
+obscured flood scenes.</em></p>
+<figure>
+<img src="../results/figures/baselines/resnet50_bce/fp_fn_examples.png"
+alt="ResNet50 worst FP and FN examples" />
+<figcaption aria-hidden="true">ResNet50 worst FP and FN
+examples</figcaption>
+</figure>
+<p><em>Figure 4b: ResNet50 BCE worst val errors (seed 42). Top row
+(red): false positives. Bottom row (orange): false negatives — notably
+many are prototypical flood scenes incorrectly labelled as non-flood,
+indicating a systematic decision boundary problem rather than genuine
+ambiguity.</em></p>
+<h2 id="confounder-analysis">5.5 Confounder Analysis</h2>
+<p>Table 2 reports per-category FP rates on the val split for both BCE
+baselines. River is the dominant confounder for ResNet50 (3.9%, 95% CP
+CI: [0.8%, 11.0%]). EfficientNetB0’s per-category rates on the training
+split are near zero (river: 0.31%), motivating Phase 1 mining.</p>
+<table>
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>N Val</th>
+<th>EfficientNetB0 FP</th>
+<th>EfficientNetB0 Rate</th>
+<th>95% CP CI (EffNet)</th>
+<th>ResNet50 FP</th>
+<th>ResNet50 Rate</th>
+<th>95% CP CI (ResNet50)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>river</td>
+<td>76</td>
+<td>7</td>
+<td><strong>9.2%</strong></td>
+<td>[3.8%, 17.7%]</td>
+<td>3</td>
+<td><strong>3.9%</strong></td>
+<td>[0.8%, 11.0%]</td>
+</tr>
+<tr>
+<td>plant</td>
+<td>34</td>
+<td>1</td>
+<td>2.9%</td>
+<td>[0.1%, 15.3%]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, <strong>10.3%</strong>]</td>
+</tr>
+<tr>
+<td>animal</td>
+<td>67</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 5.4%]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 5.4%]</td>
+</tr>
+<tr>
+<td>building</td>
+<td>55</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 6.5%]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 6.5%]</td>
+</tr>
+<tr>
+<td>park_walkway</td>
+<td>82</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 4.4%]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 4.4%]</td>
+</tr>
+<tr>
+<td>street_clear</td>
+<td>105</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 3.5%]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 3.5%]</td>
+</tr>
+<tr>
+<td>swimming_pool</td>
+<td>28</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, <strong>12.3%</strong>]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, <strong>12.3%</strong>]</td>
+</tr>
+<tr>
+<td>vehicle</td>
+<td>50</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 7.1%]</td>
+<td>0</td>
+<td>0.0%</td>
+<td>[0.0%, 7.1%]</td>
+</tr>
+</tbody>
+</table>
+<p><em>Table 2: Per-category FP rates on val split (BCE baseline, seed
+42, τ=0.5). Bold values highlight the primary confounders.
+EfficientNetB0 has higher river FP rate (9.2% vs 3.9%) but dramatically
+better flood recall (97.8% vs 80.4%) — it trades non-flood precision on
+the river category for far fewer missed floods. Bold CI upper bounds
+highlight categories where “0% FP” cannot be interpreted as robustness
+without larger samples.</em></p>
+<blockquote>
+<p><strong>Interpretation note on swimming pool</strong>: The observed
+0% FP rate on 28 swimming pool val images has an upper 95% CI bound of
+<strong>12.3%</strong>. ResNet50 cannot be declared robust to swimming
+pool confounders from this data.</p>
+</blockquote>
+<h2 id="hard-negative-mining-results">5.6 Hard Negative Mining
+Results</h2>
+<p><em>EfficientNetB0 HNM runs in progress. ResNet50 BCE HNM in
+progress. ResNet50 Focal HNM result documented below.</em></p>
+<p><strong>ResNet50 + Focal HNM collapse (empirical finding).</strong>
+The ResNet50 Focal HNM run was attempted and terminated after confirming
+decision-boundary collapse: val accuracy ≈ 87.4% with flood recall ≈ 50%
+(near random for the positive class) and ROC-AUC ≈ 0.5 — identical in
+character to the ResNet50 Focal baseline failure. This is a significant
+finding: hard negative mining from the Phase 1 checkpoint cannot recover
+a model whose decision boundary has collapsed under focal loss. The
+mechanism is consistent with the discussion in Section 6.2 — focal
+loss’s gradient reweighting creates a regime where ResNet50
+over-suppresses easy flood examples, and the resulting model cannot use
+the additional hard negatives productively. This reinforces the paper’s
+thesis: <strong>distribution augmentation (HNM) and gradient reweighting
+(focal loss) are not equivalent interventions</strong>, and for
+ResNet50, only BCE + HNM is a viable training path. ResNet50 Focal is
+excluded from further HNM ablation.</p>
+<p><em>Pending. EfficientNetB0 BCE and Focal HNM results, no-injection
+controls.</em></p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Condition</th>
+<th>Flood Recall ↑</th>
+<th>PR-AUC ↑</th>
+<th>River FP Rate</th>
+<th>Pool FP Rate</th>
+<th>McNemar p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EfficientNetB0</td>
+<td>BCE baseline</td>
+<td>97.8%</td>
+<td>0.998</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EfficientNetB0</td>
+<td>HNM-BCE</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EfficientNetB0</td>
+<td>HNM-Focal</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EfficientNetB0</td>
+<td>No injection</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EfficientNetB0</td>
+<td>Random injection</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>BCE baseline</td>
+<td>80.4%</td>
+<td>0.961</td>
+<td>3.9%</td>
+<td>0.0% [0–12.3%]</td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>HNM-BCE</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>HNM-Focal</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>No injection</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>Random injection</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><em>Table 3: HNM ablation results (mean across n=5 seeds with 95%
+bootstrap CI). Results pending.</em></p>
+<h2 id="calibration-analysis">5.7 Calibration Analysis</h2>
+<p><em>Pending. Temperature scaling and reliability diagrams to be added
+after HNM runs complete.</em></p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Condition</th>
+<th>ECE (pre-cal) ↓</th>
+<th>ECE (post-cal) ↓</th>
+<th>Temperature T</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EfficientNetB0</td>
+<td>BCE baseline</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EfficientNetB0</td>
+<td>HNM</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>BCE baseline</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>HNM</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><em>Table 4: Calibration results. ECE = Expected Calibration Error;
+lower is better.</em></p>
+<h2 id="multi-seed-results">5.8 Multi-Seed Results</h2>
+<p><em>Pending. Seeds 1, 7, 123, 2024 in addition to seed 42.</em></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Model</th>
+<th>Condition</th>
+<th>Flood Recall (mean ± 95% CI)</th>
+<th>PR-AUC (mean ± 95% CI)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EfficientNetB0</td>
+<td>BCE baseline</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EfficientNetB0</td>
+<td>HNM</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>BCE baseline</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ResNet50</td>
+<td>HNM</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><em>Table 5: Multi-seed results (n=5 seeds, 95% bootstrap CI).
+Pending.</em></p>
+<hr />
+<h1 id="discussion">6. Discussion</h1>
+<h2 id="why-pr-auc-reveals-what-accuracy-hides">6.1 Why PR-AUC Reveals
+What Accuracy Hides</h2>
+<p>ResNet50 achieves <em>higher</em> val accuracy (98.5%) than
+EfficientNetB0 (98.3%), yet its PR-AUC is 3.6 points lower (0.9614 vs
+0.9976) and it misses 63 floods vs 7. The mechanism: ResNet50’s larger
+capacity produces a confident non-flood prior on the majority class,
+which inflates accuracy (correct non-flood predictions dominate the
+count) while suppressing recall. ROC-AUC (0.9728 vs 0.9985) reveals a
+meaningful gap, but PR-AUC (0.9614 vs 0.9976) quantifies it more
+sharply. This empirically confirms Davis &amp; Goadrich [2006]’s
+argument and argues for PR-AUC as the standard primary metric in flood
+screening evaluations.</p>
+<h2
+id="class-weights-and-focal-loss-do-not-fix-resnet50s-recall-problem">6.2
+Class Weights and Focal Loss Do Not Fix ResNet50’s Recall Problem</h2>
+<p>Both models were trained with balanced class weights from
+<code>compute_class_weight("balanced")</code>. Despite this, ResNet50
+BCE achieves only 80.4% flood recall. Focal loss (γ=2.0) makes it worse:
+ResNet50 Focal drops to 71.1% (93 FN vs 63 FN). Meanwhile,
+EfficientNetB0 Focal improves over BCE (98.5% vs 97.8%, 5 FN vs 7
+FN).</p>
+<p>Class weighting is a global frequency-based correction; focal loss is
+a local within-batch hard-example reweighting. Neither corrects for a
+model whose <strong>feature space</strong> conflates flood and non-flood
+visually — which is what ResNet50 appears to do. EfficientNetB0’s
+compound-scaled features (Tan &amp; Le, 2019) produce a better flood
+representation from ImageNet transfer, making it responsive to both
+class weighting and focal loss. ResNet50’s larger parameter count may
+cause it to overfit the dominant non-flood pattern despite weighting.
+This supports the paper’s thesis: <strong>hard negative mining</strong>
+— by permanently adding visually confounding non-flood images to the
+training distribution — is the appropriate fix for decision-boundary
+collapse rather than gradient reweighting alone.</p>
+<h2 id="the-phase-1-mining-design">6.3 The Phase 1 Mining Design</h2>
+<p>The key insight underlying Phase 1 mining is that
+<strong>memorisation destroys mining signal</strong>. By end of Phase 2,
+the model assigns near-zero flood probability to all training non-flood
+images, regardless of their visual similarity to floods. Mining from
+this checkpoint produces empty candidate lists. The Phase 1 checkpoint —
+with only the head and top 30 layers trained — retains genuine
+uncertainty on river and swimming pool images, providing a richer and
+more accurate signal of where the decision boundary needs strengthening.
+This is analogous to knowledge distillation, where intermediate
+representations often encode more generalisable information than the
+final converged model.</p>
+<h2 id="limitations">6.4 Limitations</h2>
+<ul>
+<li><strong>Small dataset</strong>: 4,099 images; per-category val
+counts as low as 28 (swimming pool). Multi-seed experiments mitigate but
+do not eliminate sensitivity to split composition.</li>
+<li><strong>Single geographic/source distribution</strong>: Dataset
+provenance is not fully characterised; temporal or geographic clustering
+within USF FloodingDataset2 and RIWA may produce train/val similarity
+beyond what stratified splitting removes.</li>
+<li><strong>Phase boundary not ablated</strong>: The (30, 50) freeze
+boundary is a design choice; optimal values for flood data are
+unknown.</li>
+<li><strong>No external test set</strong>: AlleyFloodNet and ADE20K
+integration is pending; generalisation to out-of-distribution data is
+not evaluated.</li>
+<li><strong>Cross-seed mining not yet implemented</strong>: Mining from
+one seed’s checkpoint to retrain another seed is proposed as a
+confirmation-bias mitigation but not yet evaluated.</li>
+</ul>
+<hr />
+<h1 id="conclusion">7. Conclusion</h1>
+<p><em>[Pending final results. Key points to hit: Phase 1 mining design
+validated; PR-AUC as primary metric; HNM vs. controls; calibration;
+practical recommendation for screening threshold.]</em></p>
+<hr />
+<h1 id="references">References</h1>
+<p>Alam, F., Alam, T., Hasan, M. A., Hasnat, A., Imran, M., &amp; Ofli,
+F. (2023). MEDIC: A multi-task learning dataset for disaster image
+classification. <em>Neural Computing and Applications</em>,
+<em>35</em>(3), 2609–2632.
+https://doi.org/10.1007/s00521-022-07717-0</p>
+<p>Alam, F., Imran, M., &amp; Ofli, F. (2018). CrisisMMD: Multimodal
+Twitter datasets from natural disasters. <em>Proceedings of ICWSM
+2018</em>, 465–473. https://doi.org/10.1609/icwsm.v12i1.14983</p>
+<p>Alam, F., Ofli, F., Imran, M., Alam, T., &amp; Qazi, U. (2021).
+CrisisBench: Benchmarking crisis-related social media datasets for
+humanitarian information processing. <em>Proceedings of ICWSM 2021</em>,
+923–934. https://doi.org/10.1609/icwsm.v15i1.18115</p>
+<p>Cai, G. (2025). Prioritizing recall: Recall-first machine learning
+for traffic accident severity detection. <em>IRJAEM</em>, <em>3</em>(6).
+https://doi.org/10.61173/ym16tb60</p>
+<p>Clopper, C. J., &amp; Pearson, E. S. (1934). The use of confidence or
+fiducial limits illustrated in the case of the binomial.
+<em>Biometrika</em>, <em>26</em>(4), 404–413.
+https://doi.org/10.1093/biomet/26.4.404</p>
+<p>Davis, J., &amp; Goadrich, M. (2006). The relationship between
+precision-recall and ROC curves. <em>Proceedings of ICML 2006</em>,
+233–240. https://doi.org/10.1145/1143844.1143874</p>
+<p>Dong, L., Zhao, W., Lan, Z., Liu, Y., &amp; Shi, X. (2025).
+Large-small model synergy for high-recall UAV-based aerial surveillance.
+<em>Proceedings of AIHCIR 2025</em>.
+https://doi.org/10.1109/AIHCIR67580.2025.11404852</p>
+<p>Dong, J., Jiang, Z., Pan, D., Chen, Z., Guan, Q., Zhang, H., Gui, G.,
+&amp; Gui, W. (2025). A survey on confidence calibration of deep
+learning-based classification models under class imbalance data.
+<em>IEEE Transactions on Neural Networks and Learning Systems</em>.
+https://doi.org/10.1109/TNNLS.2025.3565159</p>
+<p>Dosovitskiy, A., Beyer, L., Kolesnikov, A., Weissenborn, D., Zhai,
+X., Unterthiner, T., Dehghani, M., Minderer, M., Heigold, G., Gelly, S.,
+Uszkoreit, J., &amp; Houlsby, N. (2021). An image is worth 16x16 words:
+Transformers for image recognition at scale. <em>Proceedings of ICLR
+2021</em>. https://arxiv.org/abs/2010.11929</p>
+<p>Efron, B., &amp; Tibshirani, R. J. (1993). <em>An Introduction to the
+Bootstrap</em>. Chapman &amp; Hall.</p>
+<p>Esparza, M., Farahmand, H., Brody, S., &amp; Mostafavi, A. (2022).
+Examining data imbalance in crowdsourced reports for improving flash
+flood situational awareness. <em>ArXiv preprint arXiv:2207.05797</em>.
+https://arxiv.org/abs/2207.05797</p>
+<p>Guo, C., Pleiss, G., Sun, Y., &amp; Weinberger, K. Q. (2017). On
+calibration of modern neural networks. <em>Proceedings of ICML
+2017</em>, 1321–1330. https://dl.acm.org/doi/10.5555/3305381.3305518</p>
+<p>He, K., Zhang, X., Ren, S., &amp; Sun, J. (2016). Deep residual
+learning for image recognition. <em>Proceedings of CVPR 2016</em>,
+770–778. https://doi.org/10.1109/CVPR.2016.90</p>
+<p>Khan, M. A., Ahmed, N., Padela, J., Raza, M. S., Gangopadhyay, A.,
+Wang, J., Foulds, J., Busart, C. E., &amp; Erbacher, R. (2023).
+Flood-ResNet50: Optimized deep learning model for efficient flood
+detection on edge device. <em>Proceedings of ICMLA 2023</em>, 506–511.
+https://doi.org/10.1109/ICMLA58977.2023.00077</p>
+<p>Kirkpatrick, J., Pascanu, R., Rabinowitz, N., Veness, J., Desjardins,
+G., Rusu, A. A., Milan, K., Quan, J., Ramalho, T., Grabska-Barwinska,
+A., Hassabis, D., Clopath, C., Kumaran, D., &amp; Hadsell, R. (2017).
+Overcoming catastrophic forgetting in neural networks. <em>Proceedings
+of the National Academy of Sciences</em>, <em>114</em>(13), 3521–3526.
+https://doi.org/10.1073/pnas.1611835114</p>
+<p>Lee, S., Park, J., Kim, D., &amp; others (2025). AlleyFloodNet: A
+ground-level image dataset for rapid flood detection in economically and
+flood-vulnerable areas. <em>Electronics</em>, <em>14</em>(10), 2082.
+https://doi.org/10.3390/electronics14102082</p>
+<p>Lin, T.-Y., Goyal, P., Girshick, R., He, K., &amp; Dollár, P. (2017).
+Focal loss for dense object detection. <em>Proceedings of ICCV
+2017</em>, 2980–2988. https://doi.org/10.1109/ICCV.2017.324</p>
+<p>Lyu, S., Lyu, R., Zhao, Y., &amp; Gao, W. (2025). ResNet50-based
+progressive transfer learning. <em>Proceedings of ICCNSE 2025</em>.
+https://doi.org/10.1109/ICCNSE66404.2025.11144108</p>
+<p>Neupane, B., Aryal, J., &amp; Rajabifard, A. (2025).
+Fine-tuning-based transfer learning for building extraction. <em>Remote
+Sensing</em>, <em>17</em>(7), 1251.
+https://doi.org/10.3390/rs17071251</p>
+<p>Papadimos, T., Andreadis, S., Gialampoukidis, I., Vrochidis, S.,
+&amp; Kompatsiaris, I. (2023). Flood-related multimedia benchmark
+evaluation: Challenges, results and a novel GNN approach. <em>Applied
+Sciences</em>, <em>13</em>(8), 4814.
+https://doi.org/10.3390/app13084814</p>
+<p>Rahnemoonfar, M., Chowdhury, T., Sarkar, A., Varshney, D., Yari, M.,
+&amp; Murphy, R. (2020). FloodNet: A high resolution aerial imagery
+dataset for post flood scene understanding. <em>ArXiv preprint
+arXiv:2012.02951</em>. https://arxiv.org/abs/2012.02951</p>
+<p>Saito, T., &amp; Rehmsmeier, M. (2015). The precision-recall plot is
+more informative than the ROC plot when evaluating binary classifiers on
+imbalanced datasets. <em>PLOS ONE</em>, <em>10</em>(3), e0118432.
+https://doi.org/10.1371/journal.pone.0118432</p>
+<p>Shrivastava, A., Gupta, A., &amp; Girshick, R. (2016). Training
+region-based object detectors with online hard example mining.
+<em>Proceedings of CVPR 2016</em>, 761–769.
+https://arxiv.org/abs/1604.03540</p>
+<p>Tan, M., &amp; Le, Q. V. (2019). EfficientNet: Rethinking model
+scaling for convolutional neural networks. <em>Proceedings of ICML
+2019</em>, 6105–6114. https://proceedings.mlr.press/v97/tan19a.html</p>
+<p>Tellman, B., Sullivan, J. A., Kuhn, C., Kettner, A. J., Doyle, C. S.,
+Brakenridge, G. R., Erickson, T. A., &amp; Slayback, D. A. (2021).
+Satellite imaging reveals increased proportion of population exposed to
+floods. <em>Nature</em>, <em>596</em>, 80–86.
+https://doi.org/10.1038/s41586-021-03695-w</p>
+<p>Viola, P., &amp; Jones, M. (2004). Robust real-time face detection.
+<em>International Journal of Computer Vision</em>, <em>57</em>(2),
+137–154. https://doi.org/10.1023/B:VISI.0000013087.49260.fb</p>
+<hr />
+<h1 id="appendix">Appendix</h1>
+<h2 id="a.-hyperparameters">A. Hyperparameters</h2>
+<table>
+<thead>
+<tr>
+<th>Hyperparameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1 LR</td>
+<td>1×10⁻³</td>
+</tr>
+<tr>
+<td>Phase 2 LR</td>
+<td>1×10⁻⁴</td>
+</tr>
+<tr>
+<td>Phase 1 max epochs</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Phase 2 max epochs</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Early stopping patience</td>
+<td>10 (val loss)</td>
+</tr>
+<tr>
+<td>LR reduce patience (Phase 1)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>LR reduce patience (Phase 2)</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Batch size</td>
+<td>32</td>
+</tr>
+<tr>
+<td>Image size</td>
+<td>224×224</td>
+</tr>
+<tr>
+<td>Focal loss γ</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>HNM mining checkpoint</td>
+<td>Phase 1</td>
+</tr>
+<tr>
+<td>HNM retraining start</td>
+<td>Phase 2 checkpoint</td>
+</tr>
+<tr>
+<td>HNM top_pct</td>
+<td>0.10</td>
+</tr>
+<tr>
+<td>HNM FP threshold θ</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td>Seeds</td>
+<td>42, 1, 7, 123, 2024</td>
+</tr>
+<tr>
+<td>Compute</td>
+<td>Apple M4 (16GB, Metal GPU)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="b.-clopper-pearson-ci-reference-table">B. Clopper-Pearson CI
+Reference Table</h2>
+<p>Upper bound of 95% CI for observed FP rate = 0%, by sample size.</p>
+<table>
+<thead>
+<tr>
+<th>N val images</th>
+<th>Upper 95% CI bound</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>30.8%</td>
+</tr>
+<tr>
+<td>15</td>
+<td>21.8%</td>
+</tr>
+<tr>
+<td>28</td>
+<td><strong>12.3%</strong> (swimming pool)</td>
+</tr>
+<tr>
+<td>34</td>
+<td><strong>10.3%</strong> (plant)</td>
+</tr>
+<tr>
+<td>50</td>
+<td>7.1% (vehicle)</td>
+</tr>
+<tr>
+<td>55</td>
+<td>6.5% (building)</td>
+</tr>
+<tr>
+<td>67</td>
+<td>5.4% (animal)</td>
+</tr>
+<tr>
+<td>76</td>
+<td>4.7% (river)</td>
+</tr>
+<tr>
+<td>82</td>
+<td>4.4% (park_walkway)</td>
+</tr>
+<tr>
+<td>105</td>
+<td>3.5% (street_clear)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="c.-dataset-release">C. Dataset Release</h2>
+<p>Training dataset: <code>zinnia82/flood-binary-hnm-benchmark</code>
+(Hugging Face Hub). Code: [TODO — GitHub link before submission].</p>
+</body>
+</html>

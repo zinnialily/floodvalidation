@@ -117,6 +117,12 @@ def parse_args() -> argparse.Namespace:
         default="./results",
         help="Directory for logs and evaluation outputs (separate from model checkpoints).",
     )
+    parser.add_argument(
+        "--resume_phase2",
+        default=None,
+        metavar="CKPT_PATH",
+        help="Path to a Phase 1 checkpoint to load and skip directly to Phase 2.",
+    )
     return parser.parse_args()
 
 
@@ -168,13 +174,16 @@ def print_runtime_env() -> None:
     print("=" * 60)
     print("Runtime environment")
     print("=" * 60)
-    result = subprocess.run(
-        ["nvidia-smi"], capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        print(result.stdout[:600])
-    else:
-        print("nvidia-smi not available (CPU-only runtime or no driver).")
+    try:
+        result = subprocess.run(
+            ["nvidia-smi"], capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print(result.stdout[:600])
+        else:
+            print("nvidia-smi not available (CPU-only runtime or no driver).")
+    except FileNotFoundError:
+        print("nvidia-smi not found (macOS Metal or CPU-only runtime).")
     print(f"TensorFlow version : {tf.__version__}")
     print(f"Python version     : {sys.version}")
     print("=" * 60)
@@ -355,48 +364,62 @@ def main() -> None:
     class_weight_dict = compute_class_weights(train_gen)
 
     # -- Model --------------------------------------------------------------
-    print(f"\nBuilding model: arch={args.arch}, phase_boundary=({n_trainable}, {n_frozen})")
-    model, base_model = build_model(args.arch, (n_trainable, n_frozen))
-    model.summary(print_fn=print)
+    if args.resume_phase2:
+        print(f"\nLoading Phase 1 checkpoint for Phase 2 resume: {args.resume_phase2}")
+        model = tf.keras.models.load_model(args.resume_phase2)
+        # Retrieve base_model by name for freeze_for_phase2
+        base_model = model.get_layer(
+            "efficientnetb0" if args.arch == "efficientnet" else "resnet50"
+        )
+        model.summary(print_fn=print)
+        # Fake a phase1 history with 0 epochs so Phase 2 starts at epoch 0
+        history_p1 = type("H", (), {"history": {"loss": []}})()
+        phase1_ckpt = args.resume_phase2
+        phase1_log  = "(resumed — skipped)"
+        print("Phase 1 skipped (resuming from checkpoint).")
+    else:
+        print(f"\nBuilding model: arch={args.arch}, phase_boundary=({n_trainable}, {n_frozen})")
+        model, base_model = build_model(args.arch, (n_trainable, n_frozen))
+        model.summary(print_fn=print)
 
-    # -- Phase 1 ------------------------------------------------------------
-    phase1_ckpt = os.path.join(
-        args.output_dir, f"{args.arch}_{loss_label}_phase1_{timestamp}.keras"
-    )
-    phase1_log = os.path.join(log_dir, f"{args.arch}_baseline_{loss_label}_phase1_{timestamp}.csv")
+        # -- Phase 1 ----------------------------------------------------------
+        phase1_ckpt = os.path.join(
+            args.output_dir, f"{args.arch}_{loss_label}_phase1_{timestamp}.keras"
+        )
+        phase1_log = os.path.join(log_dir, f"{args.arch}_baseline_{loss_label}_phase1_{timestamp}.csv")
 
-    print(f"\n{'='*60}")
-    print(f"Phase 1: last {n_trainable} backbone layers trainable, LR={PHASE1_LR}")
-    print(f"  Checkpoint : {phase1_ckpt}")
-    print(f"  Log        : {phase1_log}")
-    print(f"{'='*60}\n")
+        print(f"\n{'='*60}")
+        print(f"Phase 1: last {n_trainable} backbone layers trainable, LR={PHASE1_LR}")
+        print(f"  Checkpoint : {phase1_ckpt}")
+        print(f"  Log        : {phase1_log}")
+        print(f"{'='*60}\n")
 
-    model.compile(
-        optimizer=Adam(learning_rate=PHASE1_LR),
-        loss=get_loss(args),
-        metrics=[
-            "accuracy",
-            Precision(name="precision"),
-            Recall(name="recall"),
-            AUC(name="auc"),
-        ],
-    )
+        model.compile(
+            optimizer=Adam(learning_rate=PHASE1_LR),
+            loss=get_loss(args),
+            metrics=[
+                "accuracy",
+                Precision(name="precision"),
+                Recall(name="recall"),
+                AUC(name="auc"),
+            ],
+        )
 
-    phase1_callbacks = build_callbacks(
-        checkpoint_path=phase1_ckpt,
-        patience=EARLY_STOPPING_PATIENCE,
-        lr_patience=LR_PATIENCE_PHASE1,
-        log_path=phase1_log,
-    )
+        phase1_callbacks = build_callbacks(
+            checkpoint_path=phase1_ckpt,
+            patience=EARLY_STOPPING_PATIENCE,
+            lr_patience=LR_PATIENCE_PHASE1,
+            log_path=phase1_log,
+        )
 
-    history_p1 = model.fit(
-        train_gen,
-        epochs=PHASE1_MAX_EPOCHS,
-        validation_data=val_gen,
-        class_weight=class_weight_dict,
-        callbacks=phase1_callbacks,
-        verbose=1,
-    )
+        history_p1 = model.fit(
+            train_gen,
+            epochs=PHASE1_MAX_EPOCHS,
+            validation_data=val_gen,
+            class_weight=class_weight_dict,
+            callbacks=phase1_callbacks,
+            verbose=1,
+        )
 
     # -- Phase 2 ------------------------------------------------------------
     phase2_ckpt = os.path.join(
@@ -454,10 +477,11 @@ def main() -> None:
     print("Training summary")
     print(f"{'='*60}")
 
-    p1_best = _best_epoch_metrics(history_p1, monitor="val_loss")
-    print("\nPhase 1 best epoch metrics (by val_loss):")
-    for k, v in p1_best.items():
-        print(f"  {k:<25s} {v:.6f}")
+    if not args.resume_phase2:
+        p1_best = _best_epoch_metrics(history_p1, monitor="val_loss")
+        print("\nPhase 1 best epoch metrics (by val_loss):")
+        for k, v in p1_best.items():
+            print(f"  {k:<25s} {v:.6f}")
 
     p2_best = _best_epoch_metrics(history_p2, monitor="val_loss")
     print("\nPhase 2 best epoch metrics (by val_loss):")

@@ -1,0 +1,9 @@
+category,n_images,n_fp,fp_rate
+river,76,8,0.10526315789473684
+animal,67,0,0.0
+building,55,0,0.0
+park_walkway,82,0,0.0
+plant,34,0,0.0
+street_clear,105,0,0.0
+swimming_pool,28,0,0.0
+vehicle,50,0,0.0

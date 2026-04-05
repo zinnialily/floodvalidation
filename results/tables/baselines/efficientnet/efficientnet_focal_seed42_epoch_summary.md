@@ -1,0 +1,39 @@
+# EFFICIENTNET Baseline (FOCAL, Seed 42) — Epoch Summary
+
+**Dataset:** Clean deduplicated split (4,099 unique images, 55 dupes removed)
+
+## Per-Epoch Metrics
+
+| Epoch | LR | Train Loss | Val Loss | Train Acc | Val Acc | Train AUC | Val AUC | Train Prec | Val Prec | Train Recall | Val Recall |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 16 | 0.0000 | 0.0145 | 0.0173 | 0.9820 | 0.9878 | 0.9984 | 0.9985 | 0.9898 | 0.9899 | 0.9804 | 0.9899 | ⭐
+| 17 | 0.0000 | 0.0145 | 0.0174 | 0.9854 | 0.9866 | 0.9988 | 0.9985 | 0.9929 | 0.9899 | 0.9829 | 0.9879 |
+| 18 | 0.0000 | 0.0151 | 0.0179 | 0.9814 | 0.9878 | 0.9988 | 0.9984 | 0.9928 | 0.9899 | 0.9764 | 0.9899 |
+| 19 | 0.0000 | 0.0131 | 0.0181 | 0.9841 | 0.9866 | 0.9986 | 0.9985 | 0.9904 | 0.9880 | 0.9834 | 0.9899 |
+| 20 | 0.0000 | 0.0135 | 0.0183 | 0.9845 | 0.9841 | 0.9988 | 0.9985 | 0.9924 | 0.9859 | 0.9819 | 0.9879 |
+| 21 | 0.0000 | 0.0114 | 0.0179 | 0.9857 | 0.9853 | 0.9991 | 0.9985 | 0.9919 | 0.9879 | 0.9844 | 0.9879 |
+| 22 | 0.0000 | 0.0113 | 0.0175 | 0.9869 | 0.9866 | 0.9991 | 0.9986 | 0.9919 | 0.9899 | 0.9864 | 0.9879 |
+| 23 | 0.0000 | 0.0106 | 0.0179 | 0.9875 | 0.9866 | 0.9992 | 0.9985 | 0.9924 | 0.9899 | 0.9869 | 0.9879 |
+
+## Val Set Performance (Best Checkpoint)
+
+| Metric | Flood | Non-Flood | Weighted Avg |
+|--------|-------|-----------|--------------|
+| Precision | 0.9845 | 0.9899 | 0.9878 |
+| Recall    | 0.9845    | 0.9899    | 0.9878 |
+| F1-Score  | 0.9845  | 0.9899  | 0.9878 |
+
+**Confusion Matrix:** TP=317 | FP=5 | FN=5 | TN=492
+
+## Discrimination (Post-hoc, sklearn)
+
+| Metric | Value |
+|--------|-------|
+| PR-AUC | 0.9977 |
+| ROC-AUC | 0.9986 |
+
+## Figures
+- `results/figures/baselines/efficientnet_focal/training_curves.png`
+- `results/figures/baselines/efficientnet_focal/confusion_matrix.png`
+- `results/figures/baselines/efficientnet_focal/pr_roc_curves.png`
+- `results/figures/baselines/efficientnet_focal/fp_fn_examples.png`

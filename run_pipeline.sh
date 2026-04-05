@@ -34,26 +34,63 @@ echo "Installing dependencies..."
 pip install -q \
   "tensorflow>=2.16,<2.18" numpy pandas scikit-learn \
   matplotlib seaborn Pillow scipy tf-keras-vis \
-  requests tqdm gdown umap-learn huggingface_hub
+  requests tqdm gdown umap-learn huggingface_hub datasets
 
 # ── Download dataset from HuggingFace Hub (skipped if already present) ────────
 BINARY_DIR="$DATA_DIR/processed_data/binary"
 if [ ! -d "$BINARY_DIR/train" ]; then
   echo "Downloading dataset from HuggingFace Hub (zinnia82/flood-binary-hnm-benchmark)..."
   python - <<'PYEOF'
-import os, pathlib
-from huggingface_hub import snapshot_download
+import os
+import pathlib
+import pandas as pd
+from datasets import load_dataset
+from PIL import Image
 
-dest = pathlib.Path("./data/FloodingDataset2/processed_data/binary")
-dest.mkdir(parents=True, exist_ok=True)
+HF_TOKEN    = os.environ.get("HF_TOKEN")
+DATASET_ID  = "zinnia82/flood-binary-hnm-benchmark"
+BINARY_DIR  = pathlib.Path("./data/FloodingDataset2/processed_data/binary")
 
-snapshot_download(
-    repo_id="zinnia82/flood-binary-hnm-benchmark",
-    repo_type="dataset",
-    local_dir=str(dest),
-    token=os.environ.get("HF_TOKEN"),
-)
-print(f"Dataset downloaded to {dest}")
+print(f"Loading {DATASET_ID} via datasets library...")
+ds = load_dataset(DATASET_ID, token=HF_TOKEN)
+
+print(f"Splits found: {list(ds.keys())}")
+
+for split_name, split_ds in ds.items():
+    label_feature = split_ds.features["label"]
+    has_category  = "category" in split_ds.features
+    records = []
+
+    for row in split_ds:
+        label    = label_feature.int2str(row["label"])   # "flood" / "non_flood"
+        category = (row.get("category") or "unknown") if has_category else "unknown"
+        source   = (row.get("source")   or "")        if "source" in split_ds.features else ""
+
+        dest_dir = BINARY_DIR / split_name / label / category
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        img = row["image"]
+        if not isinstance(img, Image.Image):
+            img = Image.fromarray(img)
+        img = img.convert("RGB")
+
+        # Use a zero-padded index as filename to guarantee uniqueness
+        idx      = len(list(dest_dir.iterdir()))
+        filename = f"{category}_{idx:06d}.jpg"
+        img.save(dest_dir / filename, format="JPEG", quality=95)
+
+        records.append({
+            "file_name": f"{label}/{category}/{filename}",
+            "category":  category,
+            "source":    source,
+        })
+
+    # Write metadata.csv in HuggingFace ImageFolder format
+    meta_path = BINARY_DIR / split_name / "metadata.csv"
+    pd.DataFrame(records).to_csv(meta_path, index=False)
+    print(f"  [{split_name}] {len(records)} images → {BINARY_DIR / split_name}  (metadata.csv written)")
+
+print(f"Dataset ready at {BINARY_DIR}")
 PYEOF
 fi
 
@@ -81,41 +118,55 @@ for SEED in "${SEEDS[@]}"; do
   python scripts/train_baseline.py \
     --arch efficientnet --seed "$SEED" --loss binary_crossentropy \
     --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" --results_dir "$RESULTS_DIR"
+  ENET_BCE_P1=$(ls -t "$MODELS_DIR"/efficientnet_bce_phase1_*.keras | head -1)
   ENET_BCE_P2=$(ls -t "$MODELS_DIR"/efficientnet_bce_phase2_*.keras | head -1)
-  echo "  → $ENET_BCE_P2"
+  echo "  Phase 1 → $ENET_BCE_P1"
+  echo "  Phase 2 → $ENET_BCE_P2"
 
   echo "[Seed $SEED] Training EfficientNet baseline (Focal)..."
   python scripts/train_baseline.py \
     --arch efficientnet --seed "$SEED" --loss focal \
     --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" --results_dir "$RESULTS_DIR"
+  ENET_FOCAL_P1=$(ls -t "$MODELS_DIR"/efficientnet_focal_phase1_*.keras | head -1)
   ENET_FOCAL_P2=$(ls -t "$MODELS_DIR"/efficientnet_focal_phase2_*.keras | head -1)
-  echo "  → $ENET_FOCAL_P2"
+  echo "  Phase 1 → $ENET_FOCAL_P1"
+  echo "  Phase 2 → $ENET_FOCAL_P2"
 
   echo "[Seed $SEED] Training ResNet50 baseline (BCE)..."
   python scripts/train_baseline.py \
     --arch resnet50 --seed "$SEED" --loss binary_crossentropy \
     --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" --results_dir "$RESULTS_DIR"
+  RNET_BCE_P1=$(ls -t "$MODELS_DIR"/resnet50_bce_phase1_*.keras | head -1)
   RNET_BCE_P2=$(ls -t "$MODELS_DIR"/resnet50_bce_phase2_*.keras | head -1)
-  echo "  → $RNET_BCE_P2"
+  echo "  Phase 1 → $RNET_BCE_P1"
+  echo "  Phase 2 → $RNET_BCE_P2"
 
   echo "[Seed $SEED] Training ResNet50 baseline (Focal)..."
   python scripts/train_baseline.py \
     --arch resnet50 --seed "$SEED" --loss focal \
     --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" --results_dir "$RESULTS_DIR"
+  RNET_FOCAL_P1=$(ls -t "$MODELS_DIR"/resnet50_focal_phase1_*.keras | head -1)
   RNET_FOCAL_P2=$(ls -t "$MODELS_DIR"/resnet50_focal_phase2_*.keras | head -1)
-  echo "  → $RNET_FOCAL_P2"
+  echo "  Phase 1 → $RNET_FOCAL_P1"
+  echo "  Phase 2 → $RNET_FOCAL_P2"
 
-  # ── STEP 2: Confounder analysis → mining_candidates_{arch}.txt ─────────────
+  # ── STEP 2: Confounder analysis from Phase 1 checkpoints ───────────────────
+  # Mining is intentionally run from Phase 1 (not Phase 2) checkpoints.
+  # By end of Phase 2, the model has memorised the training non-flood categories
+  # and FP rates collapse to ~0, leaving no candidates to mine.
+  # Phase 1 (head + top layers trained, backbone mostly frozen) has higher FP
+  # rates on visually confusing categories, producing richer mining candidates.
+  # HNM then retrains from the fully converged Phase 2 checkpoint.
 
-  echo "[Seed $SEED] Analyzing confounders (EfficientNet)..."
+  echo "[Seed $SEED] Analyzing confounders from Phase 1 (EfficientNet)..."
   python scripts/analyze_confounders.py \
-    --model_path "$ENET_BCE_P2" --arch efficientnet \
-    --data_dir "$DATA_DIR" --output_dir "$RESULTS_DIR"
+    --model_path "$ENET_BCE_P1" --arch efficientnet \
+    --data_dir "$DATA_DIR" --output_dir "$RESULTS_DIR" --fp_threshold 0.05 --mine_all
 
-  echo "[Seed $SEED] Analyzing confounders (ResNet50)..."
+  echo "[Seed $SEED] Analyzing confounders from Phase 1 (ResNet50)..."
   python scripts/analyze_confounders.py \
-    --model_path "$RNET_BCE_P2" --arch resnet50 \
-    --data_dir "$DATA_DIR" --output_dir "$RESULTS_DIR"
+    --model_path "$RNET_BCE_P1" --arch resnet50 \
+    --data_dir "$DATA_DIR" --output_dir "$RESULTS_DIR" --fp_threshold 0.05 --mine_all
 
   # ── STEP 3: Hard Negative Mining ────────────────────────────────────────────
   # Note: analyze_confounders wrote results/mining_candidates_efficientnet.txt
@@ -123,42 +174,48 @@ for SEED in "${SEEDS[@]}"; do
 
   echo "[Seed $SEED] HNM — EfficientNet (BCE)..."
   python scripts/train_hnm.py \
-    --arch efficientnet --model_path "$ENET_BCE_P2" --loss binary_crossentropy \
+    --arch efficientnet --model_path "$ENET_BCE_P2" \
+    --mining_model_path "$ENET_BCE_P1" --loss binary_crossentropy \
     --seed "$SEED" --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" \
     --results_dir "$RESULTS_DIR"
   ENET_HNM_BCE=$(ls -t "$MODELS_DIR"/efficientnet_hnm_percentile_*.keras | head -1)
 
   echo "[Seed $SEED] HNM — EfficientNet (Focal)..."
   python scripts/train_hnm.py \
-    --arch efficientnet --model_path "$ENET_FOCAL_P2" --loss focal \
+    --arch efficientnet --model_path "$ENET_FOCAL_P2" \
+    --mining_model_path "$ENET_FOCAL_P1" --loss focal \
     --seed "$SEED" --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" \
     --results_dir "$RESULTS_DIR"
   ENET_HNM_FOCAL=$(ls -t "$MODELS_DIR"/efficientnet_hnm_percentile_*.keras | head -1)
 
   echo "[Seed $SEED] HNM — EfficientNet (no injection control)..."
   python scripts/train_hnm.py \
-    --arch efficientnet --model_path "$ENET_BCE_P2" --no_injection \
+    --arch efficientnet --model_path "$ENET_BCE_P2" \
+    --mining_model_path "$ENET_BCE_P1" --no_injection \
     --seed "$SEED" --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" \
     --results_dir "$RESULTS_DIR"
   ENET_NO_INJ=$(ls -t "$MODELS_DIR"/efficientnet_extended_baseline_*.keras | head -1)
 
   echo "[Seed $SEED] HNM — EfficientNet (random injection control)..."
   python scripts/train_hnm.py \
-    --arch efficientnet --model_path "$ENET_BCE_P2" --random_injection \
+    --arch efficientnet --model_path "$ENET_BCE_P2" \
+    --mining_model_path "$ENET_BCE_P1" --random_injection \
     --seed "$SEED" --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" \
     --results_dir "$RESULTS_DIR"
   ENET_RAND_INJ=$(ls -t "$MODELS_DIR"/efficientnet_random_inject_*.keras | head -1)
 
   echo "[Seed $SEED] HNM — ResNet50 (BCE)..."
   python scripts/train_hnm.py \
-    --arch resnet50 --model_path "$RNET_BCE_P2" --loss binary_crossentropy \
+    --arch resnet50 --model_path "$RNET_BCE_P2" \
+    --mining_model_path "$RNET_BCE_P1" --loss binary_crossentropy \
     --seed "$SEED" --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" \
     --results_dir "$RESULTS_DIR"
   RNET_HNM_BCE=$(ls -t "$MODELS_DIR"/resnet50_hnm_percentile_*.keras | head -1)
 
   echo "[Seed $SEED] HNM — ResNet50 (Focal)..."
   python scripts/train_hnm.py \
-    --arch resnet50 --model_path "$RNET_FOCAL_P2" --loss focal \
+    --arch resnet50 --model_path "$RNET_FOCAL_P2" \
+    --mining_model_path "$RNET_FOCAL_P1" --loss focal \
     --seed "$SEED" --data_dir "$DATA_DIR" --output_dir "$MODELS_DIR" \
     --results_dir "$RESULTS_DIR"
   RNET_HNM_FOCAL=$(ls -t "$MODELS_DIR"/resnet50_hnm_percentile_*.keras | head -1)

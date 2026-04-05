@@ -36,7 +36,9 @@ from tensorflow.keras.models import Model
 # ---------------------------------------------------------------------------
 
 PREPROCESS_FN = {
-    "efficientnet": tf.keras.applications.efficientnet.preprocess_input,
+    # In TF 2.16 (Keras 3), EfficientNetB0 has built-in Rescaling+Normalization layers
+    # and expects raw [0, 255] input — no external preprocessing needed.
+    "efficientnet": lambda x: x,
     "resnet50": tf.keras.applications.resnet50.preprocess_input,
 }
 """
@@ -121,18 +123,14 @@ def verify_preprocessing(generator, arch: str) -> None:
         )
 
     elif arch == "efficientnet":
-        # efficientnet.preprocess_input maps [0, 255] -> [-1, 1].
-        # If the generator is already rescaling to [0, 1], the preprocessing
-        # function maps [0, 1] -> roughly [-1, -0.992], so batch.max() would
-        # be close to -0.992 rather than +1.  Checking both conditions catches
-        # both the double-rescale bug and a missing preprocessing_function.
-        assert batch_min < 0 and batch_max <= 1.01, (
+        # In TF 2.16 (Keras 3), EfficientNetB0 has built-in Rescaling+Normalization
+        # layers and expects raw [0, 255] input.  Generator should pass pixels as-is.
+        assert batch_min >= 0 and batch_max > 1.01, (
             f"[FAIL] EfficientNet preprocessing check: "
             f"batch range=[{batch_min:.3f}, {batch_max:.3f}], "
-            "expected min < 0 and max <= 1.01 (i.e. roughly [-1, 1]).  "
-            "Fix: remove 'rescale=1./255' from your ImageDataGenerator and pass "
-            "raw [0, 255] pixels with "
-            "preprocessing_function=PREPROCESS_FN['efficientnet']."
+            "expected raw [0, 255] pixels (Keras 3 EfficientNet normalises internally). "
+            "Fix: remove 'rescale=1./255' from your ImageDataGenerator and do not "
+            "apply any external preprocessing_function for EfficientNet."
         )
 
     print(
@@ -229,10 +227,10 @@ def build_model(
     inputs = tf.keras.Input(shape=(224, 224, 3), name="input_image")
 
     if arch == "efficientnet":
+        # include_preprocessing was removed in Keras 3; preprocessing is built into the model.
         base_model = EfficientNetB0(
             weights="imagenet",
             include_top=False,
-            include_preprocessing=False,
             input_shape=(224, 224, 3),
         )
     else:  # resnet50
