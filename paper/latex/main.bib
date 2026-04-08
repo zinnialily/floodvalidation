@@ -1,0 +1,285 @@
+%% main.bib — Bibliography for Confounder-Robust Flood Detection paper
+%% All entries with DOIs verified from paper/paper.md reference list
+%% (references were compiled from literature_review_flood_screening.md, 53 papers)
+%% Entries marked [CITATION NEEDED] in main.tex have no entry here —
+%% see paper/latex/TODO_CITATIONS.md
+
+%% ─── Datasets ──────────────────────────────────────────────────────────────
+
+%% FloodingDataset2 — No formal paper found; distributed informally via USF
+%% Google Drive. Cited as @misc with URL. Mark [CITATION NEEDED] in text if
+%% a formal publication is subsequently identified.
+@misc{FloodingDataset,
+  author       = {{University of South Florida}},
+  title        = {{FloodingDataset}: Street-Level Flood Binary Classification
+                  Dataset},
+  year         = {2023},
+  howpublished = {Google Drive dataset},
+  url          = {https://drive.google.com/drive/folders/1PXc9VTeQgV5WeNxa2NOC9kbRpnQtg20o},
+  note         = {[CITATION NEEDED --- no peer-reviewed paper identified as
+                  of April 2026; see TODO\_CITATIONS.md]},
+}
+
+%% RIWA — River Water Segmentation Dataset.
+%% Cite the peer-reviewed JAG journal paper (Wagner, Eltner & Maas 2023).
+%% The Kaggle dataset (Blanch Gorriz, Wagner, Eltner 2023,
+%% DOI 10.34740/kaggle/dsv/4901781) is a companion release.
+@article{Wagner2023,
+  author    = {Wagner, Franz and Eltner, Anette and Maas, Hans-Gerd},
+  title     = {River water segmentation in surveillance camera images:
+               {A} comparative study of offline and online augmentation
+               using 32 {CNN}s},
+  journal   = {International Journal of Applied Earth Observation and
+               Geoinformation},
+  year      = {2023},
+  volume    = {119},
+  pages     = {103305},
+  doi       = {10.1016/j.jag.2023.103305},
+}
+
+%% ─── Core flood detection ──────────────────────────────────────────────────
+
+@article{Lee2025,
+  author    = {Lee, Onhee and Joo, Hyunjin},
+  title     = {{AlleyFloodNet}: A ground-level image dataset for rapid flood
+               detection in economically and flood-vulnerable areas},
+  journal   = {Electronics},
+  year      = {2025},
+  volume    = {14},
+  number    = {10},
+  pages     = {2082},
+  doi       = {10.3390/electronics14102082},
+}
+
+@inproceedings{Khan2023,
+  author    = {Khan, Mohammad A. and Ahmed, Naeem and Padela, Junaid and
+               Raza, Muhammad S. and Gangopadhyay, Aryya and Wang, Jianwu and
+               Foulds, James and Busart, Carl E. and Erbacher, Robert},
+  title     = {{Flood-ResNet50}: Optimized deep learning model for efficient
+               flood detection on edge device},
+  booktitle = {Proc. ICMLA 2023},
+  year      = {2023},
+  pages     = {506--511},
+  doi       = {10.1109/ICMLA58977.2023.00077},
+}
+
+@article{Papadimos2023,
+  author    = {Papadimos, Thomas and Andreadis, Stelios and Gialampoukidis,
+               Ilias and Vrochidis, Stefanos and Kompatsiaris, Ioannis},
+  title     = {Flood-related multimedia benchmark evaluation: Challenges,
+               results and a novel {GNN} approach},
+  journal   = {Applied Sciences},
+  year      = {2023},
+  volume    = {13},
+  number    = {8},
+  pages     = {4814},
+  doi       = {10.3390/app13084814},
+}
+
+@misc{Esparza2022,
+  author    = {Esparza, Melissa and Farahmand, Hamed and Brody, Samuel and
+               Mostafavi, Ali},
+  title     = {Examining data imbalance in crowdsourced reports for improving
+               flash flood situational awareness},
+  year      = {2022},
+  eprint    = {2207.05797},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.LG},
+  url       = {https://arxiv.org/abs/2207.05797},
+}
+
+@misc{Rahnemoonfar2020,
+  author    = {Rahnemoonfar, Maryam and Chowdhury, Tashnim and Sarkar,
+               Argho and Varshney, Duber and Yari, Masoud and Murphy,
+               Robin},
+  title     = {{FloodNet}: A high resolution aerial imagery dataset for
+               post flood scene understanding},
+  year      = {2020},
+  eprint    = {2012.02951},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CV},
+  url       = {https://arxiv.org/abs/2012.02951},
+}
+
+%% ─── Remote sensing / satellite floods ────────────────────────────────────
+
+@article{Tellman2021,
+  author    = {Tellman, Beth and Sullivan, Jonathan A. and Kuhn, Catherine and
+               Kettner, Albert J. and Doyle, Colin S. and Brakenridge,
+               George R. and Erickson, Tyler A. and Slayback, Daniel A.},
+  title     = {Satellite imaging reveals increased proportion of population
+               exposed to floods},
+  journal   = {Nature},
+  year      = {2021},
+  volume    = {596},
+  pages     = {80--86},
+  doi       = {10.1038/s41586-021-03695-w},
+}
+
+%% ─── Hard negative mining ─────────────────────────────────────────────────
+
+@article{Viola2004,
+  author    = {Viola, Paul and Jones, Michael},
+  title     = {Robust real-time face detection},
+  journal   = {International Journal of Computer Vision},
+  year      = {2004},
+  volume    = {57},
+  number    = {2},
+  pages     = {137--154},
+  doi       = {10.1023/B:VISI.0000013087.49260.fb},
+}
+
+@inproceedings{Shrivastava2016,
+  author    = {Shrivastava, Abhinav and Gupta, Abhinav and Girshick,
+               Ross},
+  title     = {Training region-based object detectors with online hard
+               example mining},
+  booktitle = {Proc. CVPR 2016},
+  year      = {2016},
+  pages     = {761--769},
+  url       = {https://arxiv.org/abs/1604.03540},
+}
+
+@inproceedings{Lin2017,
+  author    = {Lin, Tsung-Yi and Goyal, Priya and Girshick, Ross and He,
+               Kaiming and Doll{\'a}r, Piotr},
+  title     = {Focal loss for dense object detection},
+  booktitle = {Proc. ICCV 2017},
+  year      = {2017},
+  pages     = {2980--2988},
+  doi       = {10.1109/ICCV.2017.324},
+}
+
+%% ─── Architectures ────────────────────────────────────────────────────────
+
+@inproceedings{He2016,
+  author    = {He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun,
+               Jian},
+  title     = {Deep residual learning for image recognition},
+  booktitle = {Proc. CVPR 2016},
+  year      = {2016},
+  pages     = {770--778},
+  doi       = {10.1109/CVPR.2016.90},
+}
+
+@inproceedings{Tan2019,
+  author    = {Tan, Mingxing and Le, Quoc V.},
+  title     = {{EfficientNet}: Rethinking model scaling for convolutional
+               neural networks},
+  booktitle = {Proc. ICML 2019},
+  year      = {2019},
+  pages     = {6105--6114},
+  url       = {https://proceedings.mlr.press/v97/tan19a.html},
+}
+
+%% ─── Transfer learning / catastrophic forgetting ─────────────────────────
+
+@article{Kirkpatrick2017,
+  author    = {Kirkpatrick, James and Pascanu, Razvan and Rabinowitz, Neil
+               and Veness, Joel and Desjardins, Guillaume and Rusu, Andrei A.
+               and Milan, Kieran and Quan, John and Ramalho, Tiago and
+               Grabska-Barwinska, Agnieszka and Hassabis, Demis and Clopath,
+               Claudia and Kumaran, Dharshan and Hadsell, Raia},
+  title     = {Overcoming catastrophic forgetting in neural networks},
+  journal   = {Proceedings of the National Academy of Sciences},
+  year      = {2017},
+  volume    = {114},
+  number    = {13},
+  pages     = {3521--3526},
+  doi       = {10.1073/pnas.1611835114},
+}
+
+@inproceedings{Lyu2025,
+  author    = {Lyu, Sheng and Lyu, Rui and Zhao, Ying and Gao, Wei},
+  title     = {{ResNet50}-based progressive transfer learning},
+  booktitle = {Proc. ICCNSE 2025},
+  year      = {2025},
+  doi       = {10.1109/ICCNSE66404.2025.11144108},
+}
+
+%% ─── Evaluation metrics ───────────────────────────────────────────────────
+
+@inproceedings{Davis2006,
+  author    = {Davis, Jesse and Goadrich, Mark},
+  title     = {The relationship between precision-recall and {ROC} curves},
+  booktitle = {Proc. ICML 2006},
+  year      = {2006},
+  pages     = {233--240},
+  doi       = {10.1145/1143844.1143874},
+}
+
+@article{Saito2015,
+  author    = {Saito, Takaya and Rehmsmeier, Marc},
+  title     = {The precision-recall plot is more informative than the {ROC}
+               plot when evaluating binary classifiers on imbalanced
+               datasets},
+  journal   = {PLOS ONE},
+  year      = {2015},
+  volume    = {10},
+  number    = {3},
+  pages     = {e0118432},
+  doi       = {10.1371/journal.pone.0118432},
+}
+
+@article{Clopper1934,
+  author    = {Clopper, Charles J. and Pearson, Egon S.},
+  title     = {The use of confidence or fiducial limits illustrated in the
+               case of the binomial},
+  journal   = {Biometrika},
+  year      = {1934},
+  volume    = {26},
+  number    = {4},
+  pages     = {404--413},
+  doi       = {10.1093/biomet/26.4.404},
+}
+
+%% ─── Statistical tests ────────────────────────────────────────────────────
+
+@article{McNemar1947,
+  author    = {McNemar, Quinn},
+  title     = {Note on the sampling error of the difference between
+               correlated proportions or percentages},
+  journal   = {Psychometrika},
+  year      = {1947},
+  volume    = {12},
+  number    = {2},
+  pages     = {153--157},
+  doi       = {10.1007/BF02295996},
+}
+
+%% ─── Calibration ──────────────────────────────────────────────────────────
+
+@inproceedings{Guo2017,
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger,
+               Kilian Q.},
+  title     = {On calibration of modern neural networks},
+  booktitle = {Proc. ICML 2017},
+  year      = {2017},
+  pages     = {1321--1330},
+  url       = {https://dl.acm.org/doi/10.5555/3305381.3305518},
+}
+
+%% ─── Bootstrap ────────────────────────────────────────────────────────────
+
+@book{Efron1993,
+  author    = {Efron, Bradley and Tibshirani, Robert J.},
+  title     = {An Introduction to the Bootstrap},
+  year      = {1993},
+  publisher = {Chapman \& Hall},
+  doi       = {10.1007/978-1-4899-4541-9},
+}
+
+%% ─── Social media / crisis data ───────────────────────────────────────────
+
+@article{Alam2023,
+  author    = {Alam, Firoj and Alam, Tanveer and Hasan, Md Arid and
+               Hasnat, Abul and Imran, Muhammad and Ofli, Ferda},
+  title     = {{MEDIC}: A multi-task learning dataset for disaster image
+               classification},
+  journal   = {Neural Computing and Applications},
+  year      = {2023},
+  volume    = {35},
+  number    = {3},
+  pages     = {2609--2632},
+  doi       = {10.1007/s00521-022-07717-0},
+}
