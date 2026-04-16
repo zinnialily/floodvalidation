@@ -31,6 +31,9 @@ results/logs/*.csv
 results/predictions/*.csv
 results/figures/*.png
 
+# Poster (embedded git repo, kept local only)
+poster/
+
 # Secrets / credentials
 *.env
 api.md
