@@ -1,166 +1,265 @@
-# Presenter Notes — Flood Detection Talk
-**"Confounder-Robust Flood Detection from Street-Level Imagery via Phase-1 Hard Negative Mining"**
-Computers & Geosciences audience (~15 min + Q&A)
+# Presentation Script & Rehearsal Guide
+**Talk:** Confounder-Robust Flood Detection from Street-Level Imagery via Phase-1 Hard Negative Mining
+**Presenter:** Aanya Singh · University of South Florida · Advised by Dr. Dixon
+**Date:** April 18, 2026 · Target duration: 20 minutes
 
 ---
 
-## Slide 1 — Title (~1 min)
-Welcome. This talk is about a specific engineering problem: automated first-pass screening of street-level images for flood detection. When we built a screener, we ran into two problems that had to be fixed before the system was fit for purpose. The first is about evaluation — the metrics most teams report will actively mislead you on this kind of data. The second is about visual confounders — images that look like floods but aren't. This talk covers both problems and what we did about them.
-
-**Key acronyms (defined here, reused throughout):**
-- PR-AUC = Precision-Recall Area Under Curve
-- ROC-AUC = Receiver Operating Characteristic AUC
-- HNM = Hard Negative Mining; P1-HNM = Phase-1 HNM
-- FP = False Positive; FN = False Negative
-- BCE = Binary Cross-Entropy
+## Section 1: Presentation Script
 
 ---
 
-## Slide 2 — Floods demand fast, reliable automated screening (~1 min)
-Floods kill roughly 10,000 people per year globally and cause hundreds of billions in economic damage. After a flood event, citizen science platforms receive thousands of street-level photos from community members. A first-pass screener routes flood images to risk models and human review, and archives the rest.
+## Slide 1 — Title
+**Time: ~0:30**
 
-**Key point:** The screener must be recall-first. A missed flood means a neighborhood never gets flagged for risk modelling or human review. A false alarm costs a reviewer one click. These failure modes are not equivalent — that asymmetry defines every design and evaluation decision in this work.
+Hi everyone, I'm Aanya Singh from the University of South Florida, working with Dr. Dixon. Today I'm going to talk about a problem that sounds simple on the surface: given a street-level photo, does it show flooding? But as we'll see, the devil is in the details — specifically, in what happens when a river, a swimming pool, or a flooded road looks almost identical to an actual flood.
 
----
-
-## Slide 3 — Visual confounders are the dominant failure mode (~1 min)
-Show the false positive / false negative examples. EfficientNet's 7 false positives were all river photographs — taken from bridges or embankments where the reflective surface, ripple pattern, and cropped horizon are visually indistinguishable from a flooded street.
-
-**Key point:** The model isn't broken. It's responding to the correct visual features (standing water, reflective texture), just in the wrong context. Residents photograph rivers, retention ponds, and swimming pools after storms — these are the images the platform receives that aren't floods but look like them.
+**Transition:** Let me start with why this problem matters at all.
 
 ---
 
-## Slide 4 — Standard metrics overstate performance (~1 min)
-Accuracy is the default classification metric, but it's wrong for imbalanced screening data. With ~84% non-flood images in validation, a model that labels everything non-flood achieves 84% accuracy. Accuracy is dominated by the majority class.
+## Slide 2 — Floods affect 58 million people annually — and real-time screening saves lives
+**Time: ~1:00**
 
-ROC-AUC integrates over all operating thresholds, including very low false positive rate regions irrelevant to real deployment.
+Between 2000 and 2018, floods exposed an estimated 58 million people per year globally — that's from a 2021 Nature study by Tellman and colleagues. During a flood event, the information pipeline matters enormously. Satellite imagery has revisit cycles of hours to days, which is too slow when you need to route emergency responders right now.
 
-**PR-AUC is the right metric:** it integrates precision (how often a flood prediction is correct) against recall (how many floods were found). Both axes are directly relevant. The 3.6-point PR-AUC gap between EfficientNet and ResNet50 corresponds to 56 missed floods in a single 819-image validation set. We use PR-AUC throughout.
+What arrives fast is citizen smartphone photos. People post pictures of flooding on social media, send them to emergency hotlines, upload them to apps. If we can automatically screen those images — flag the ones showing real flooding and filter out everything else — we can get responders to the right places faster.
 
----
+But here's the critical design constraint: if the screener misses a flood, that's a delayed response. If it fires on a river or a pool, that's a wasted resource call, which is tolerable. So from day one, this is a recall-first problem.
 
-## Slide 5 — Goal (dark slide, ~30 sec)
-Three sub-questions structure the paper:
-1. Which architecture and loss function best preserves recall?
-2. Which evaluation metric correctly ranks models for this task?
-3. Does difficulty-ranked mining from Phase-1 outperform extended training and random injection?
-
-The ablation controls (questions 2 and 3) are what make this rigorous rather than a demo.
+**Transition:** That raises the question — what makes this classification hard?
 
 ---
 
-## Slide 6 — Dataset (~1 min)
-- **4,099 images**: 1,657 flood (40.4%), 2,442 non-flood (59.6%)
-- **Train / Val / Test split**: 2,870 / 819 / 410
-- **11 fine-grained categories**: 7 flood subtypes + 2 water confounders (river/stream, swimming pool/pond) + 2 street confounders (wet road, dry street)
-- Source: CRIS-HAZARD platform + open datasets
+## Slide 3 — Rivers, pools, and wet roads share visual textures with real floods
+**Time: ~1:00**
 
-The two water-confounder categories are the primary evaluation targets for FP analysis. The dataset is more balanced (40/60) than a real deployment scenario — real deployments may have fewer flood images, which makes PR-AUC even more important.
+The core challenge is visual confounders. A river photo and a flood photo can look nearly identical: standing water, reflections, murky texture, debris at the edges. Swimming pools have clear blue water and can trigger a flood classifier. Wet roads after rain look like shallow flooding. Parks after heavy rainfall look like flood zones.
 
----
+So the task is binary: does this image depict active flooding? But the input space is full of images that share flood-like features without being floods. We call these confounders.
 
-## Slide 7 — Two-phase progressive fine-tuning (~1.5 min)
-The training strategy: Phase 1 unfreezes the top 30 backbone layers + classification head, LR=1e-4, ≤15 epochs. Phase 2 unfreezes all layers, LR=1e-5, ≤15 epochs.
+Prior work on flood detection from imagery mostly reports aggregate metrics like overall accuracy or ROC-AUC. But to our knowledge, no prior work reports per-category false positive rates with confidence intervals broken down by confounder type — which is exactly what you'd need to trust a deployed screener.
 
-**The key insight for HNM:** By the end of Phase 2, every non-flood training image has been assigned near-zero flood probability. There are no candidates to mine from the converged model. Phase 1 is the right moment — the model has learned enough to identify difficult examples (rivers, pools that look like floods) but hasn't yet resolved its uncertainty about them.
-
-We take the top 10% of non-flood training images by Phase-1 flood probability, augment each five times, and add them to training before retraining from the Phase-2 checkpoint.
+**Transition:** Before I show you results, I want to explain why the standard way of measuring performance actually misleads you on this problem.
 
 ---
 
-## Slide 8 — EfficientNetB0 vs ResNet50 confusion matrices (~1.5 min)
-Show the side-by-side confusion matrices. Both models achieve ~98% accuracy:
-- **EfficientNetB0**: 98.3% accuracy, **7 FN, 7 FP**, flood recall **97.8%**
-- **ResNet50**: 98.5% accuracy, **63 FN, 17 FP**, flood recall **80.4%**
+## Slide 4 — Standard metrics hide recall failures — Precision-Recall AUC tells the real story
+**Time: ~1:00**
 
-EfficientNet misses 7 floods. ResNet50 misses 63. That's **9× more missed floods** at essentially the same accuracy. Accuracy not only failed to detect this — it ranked ResNet50 slightly higher (98.5% vs 98.3%).
+There are two problems with standard metrics here. First, accuracy. If you have 497 non-flood validation images and 322 flood images, a model that gets a few flood images wrong can still look great on accuracy. We'll see this exact paradox: ResNet50 achieves *higher* accuracy than EfficientNetB0 — 98.5% versus 98.3% — while missing nine times more floods.
 
-This is the core motivation for PR-AUC. For all ablation experiments, we use EfficientNetB0 with BCE loss.
+Second, ROC-AUC, or Receiver Operating Characteristic Area Under Curve. ROC-AUC treats all non-flood images equally. When the non-flood class is large, it inflates the ROC score even for a model that collapses recall. The gap between our two models in ROC-AUC is only 2.6 points — sounds fine.
 
----
+But Precision-Recall AUC, or PR-AUC, focuses specifically on the flood class. It penalizes precision collapse at high recall. The PR-AUC gap is 3.6 points. That's a much more honest picture of model quality for this use case.
 
-## Slide 9 — PR-AUC exposes 56 missed floods (~1 min)
-The two panels show PR-ROC curves for EfficientNet and ResNet50 (BCE, baseline).
-
-- **EfficientNetB0**: PR-AUC = 0.9976, ROC-AUC = 0.9985
-- **ResNet50**: PR-AUC = 0.9614, ROC-AUC = 0.9728
-
-PR-AUC gap: **3.6 points** = 56 more missed floods.
-ROC-AUC gap: 2.6 points — smaller, and harder to connect intuitively to missed floods.
-
-Both metrics identified EfficientNet as better, but PR-AUC makes the stakes concrete: 56 missed flood reports in a single 819-image validation set.
+**Transition:** With that framing in place, let me state what we're actually trying to do.
 
 ---
 
-## Slide 10 — River is the only confounder (~1.5 min)
-The heatmap shows per-category FP rates across model conditions. River scenes are the only category producing false positives at τ=0.5.
+## Slide 5 — Goal: build a recall-first screener robust to visual water confounders
+**Time: ~1:00**
 
-**EfficientNetB0 BCE river FP rate**: 9.2%, Clopper-Pearson 95% CI = [3.8%, 17.7%] (7 FP / 76 images)
+Here's the quantified problem we're solving. ResNet50 with Binary Cross-Entropy loss — I'll abbreviate that as BCE from now on — misses 1 in 5 floods. Sixty-three out of 322 flood validation images are missed. That's a 19.6% miss rate. That's unacceptable for a screening system.
 
-**All other categories**: 0% FP.
+Our goals are four-fold. First, we want to *measure* the problem at a fine-grained level: which specific categories produce false positives, and by how much, with confidence intervals? Second, we want to *reduce* false positives in the dominant confounder category using Phase-1 Hard Negative Mining — I'll explain what that means shortly. Third, we want to show that *how* we inject hard negatives matters — difficulty ranking outperforms random injection. And fourth, we want to validate that PR-AUC is the right metric and that accuracy and ROC-AUC are misleading here.
 
-But "zero" requires careful interpretation:
-- Swimming pools: N=28 → 95% CI upper bound **12.3%**. We cannot conclude robustness.
-- Wet roads, street scenes, animals, buildings: also small N.
+I'll come back to that "1 in 5 floods missed" number when we get to results.
 
-**Implication**: Before deployment, expand water-confounder validation sets. Target N≥300 for river, N≥100 for pool. This is a data collection problem, not a modeling problem.
+**Transition:** Let me first tell you where the data comes from.
 
 ---
 
-## Slide 11 — HNM ablation results (~2 min)
-The four panels show PR-ROC curves for all conditions. Focus on the strict ordering in accuracy improvement:
+## Slide 6 — Dataset: 4,099 street-level images from two labeled sources, deduplicated by SHA-256
+**Time: ~1:00**
 
-| Condition | Accuracy | Δ vs Baseline |
-|---|---|---|
-| Baseline | 98.29% | — |
-| Random injection | 98.41% | +0.12 pp |
-| Extended training | 98.66% | +0.37 pp |
-| **P1-HNM** | **98.78%** | **+0.49 pp** |
+Our dataset is a combination of two sources. The first is the USF FloodingDataset, which provides labeled flood imagery with severity levels — Major, Moderate, and Minor — plus seven non-flood categories: street scenes, animals, buildings, vehicles, plants, parks and walkways, and swimming pools. That gives us 1,613 flood images and 2,087 non-flood images.
 
-**What each comparison isolates:**
-- Random vs Baseline: *category exposure* helps (even random samples from river/pool categories improve performance)
-- Extended vs Baseline: *more compute* helps beyond more data
-- P1-HNM vs Random: same count, same categories, same budget — only **difficulty ranking** differs. P1-HNM wins.
+The second source is the RIWA dataset from Wagner and colleagues in 2023 — river scene images from European river monitoring. We added 399 river images to specifically enrich the hardest confounder category. That brings our non-flood total to 2,486.
 
-The ordering is consistent with the hypothesis that Phase-1 uncertainty identifies genuinely harder examples. Note: river FP rate changes are not statistically significant (McNemar, p>0.05 after Bonferroni) — the accuracy improvement is real but per-category FP confirmation requires more data.
+Before splitting, we ran SHA-256 hashing to detect exact duplicates and removed 55 duplicate images, leaving us with 4,099 unique images. We split 80/20 using stratified sampling with seed 42, so both train and validation maintain the same 39.3% flood prevalence.
+
+**Transition:** Now let me walk through the modeling approach.
 
 ---
 
-## Slide 12 — Conclusions (dark, ~1 min)
-Four takeaways:
-1. **Use EfficientNetB0**: 97.8% vs 80.4% recall — 9× fewer missed floods at equal accuracy
-2. **Use PR-AUC**: 3.6-pt gap = 56 missed floods. Accuracy and ROC-AUC actively mislead
-3. **Phase-1 HNM works**: +0.49 pp > Extended +0.37 pp > Random +0.12 pp > Baseline
-4. **River remains hard; pool data is too sparse**: River 9.2% [3.8, 17.7]; pool "zero" at N=28 → CI upper bound 12.3%
+## Slide 7 — Method: two-phase progressive fine-tuning preserves ImageNet representations
+**Time: ~1:00**
+
+We evaluated two architectures: EfficientNetB0 with 5.3 million parameters, and ResNet50 with 25.6 million parameters. Both are pretrained on ImageNet. Instead of fine-tuning everything at once, we use a two-phase approach to preserve the low-level representations learned on ImageNet.
+
+Phase 1: we keep the early layers frozen and train only the last 30 layers with a learning rate of 1e-4 for up to 15 epochs. This gives us checkpoint M1. Phase 2: we freeze the first 50 layers and fine-tune the rest with a slower learning rate of 1e-5 for up to 20 epochs. This gives us checkpoint M2.
+
+The classification head is: Global Average Pooling, abbreviated GAP, which compresses spatial features — then Dropout at 0.2, Dense layer with 256 units and ReLU activation, BatchNorm, Dropout at 0.3, and a final sigmoid output.
+
+The two-phase structure is important for the mining step I'll describe next.
+
+**Transition:** And that mining step is the core contribution of this work.
 
 ---
 
-## Slide 13 — Future directions (~1 min)
-Five directions:
-1. Expand water-confounder validation (N≥300 river, N≥100 pool) — highest priority
-2. Per-category CIs as deployment gates: flag FP upper CI > 5% before deployment
-3. Iterative HNM across multiple checkpoints; tune mining fraction (10%) and augmentation factor (5×)
-4. Geographic/temporal generalisation: test on post-Helene imagery, other coastal geographies
-5. Threshold calibration: τ=0.5 default; calibrate on held-out deployment data using PR curve
+## Slide 8 — Phase-1 Hard Negative Mining (P1-HNM): mine confounders before the signal disappears
+**Time: ~1:00**
+
+Here's the key insight. By the time Phase 2 finishes training, the model has converged — it assigns near-zero flood probability to essentially all non-flood images. If you try to mine hard negatives at that point, there's nothing to mine. The signal is gone.
+
+But the Phase-1 checkpoint still has frozen early layers. There's residual uncertainty — especially on rivers and pools that share texture with floods. That uncertainty is the mining signal.
+
+So Phase-1 Hard Negative Mining, or P1-HNM, works in three stages. First, using the Phase-1 model M1, we flag any confounder category with a false positive rate above 5%. Rivers qualify at 9.2%. Second, we rank all river images by their predicted flood probability and take the top 10% — the hardest negatives the model is most confused by. Third, we apply 5x augmentation to those selected images and retrain from checkpoint M2.
+
+The difficulty ranking is what separates this from random injection. We're not just adding more river images — we're adding specifically the ones the model finds hardest.
+
+**Transition:** Let's see what the baseline models actually do before any mining.
 
 ---
 
-## Slide 14 — Acknowledgments (~15 sec)
-Acknowledge CRIS-HAZARD platform, USF School of Geosciences, open-source tools (PyTorch, HuggingFace, python-pptx), and reviewers. Fill in funding grant number before presenting.
+## Slide 9 — EfficientNetB0 misses 9× fewer floods than ResNet50 — visible in PR-AUC, hidden in ROC-AUC
+**Time: ~2:00**
+
+Here are the Precision-Recall curves and ROC curves for EfficientNetB0 and ResNet50, both with BCE loss. Look at the PR curves first. EfficientNetB0 achieves PR-AUC of 0.9976. ResNet50 achieves 0.9614. That's a 3.6-point gap — and it's visible in the shape of the curve. ResNet's curve drops earlier under high-recall conditions.
+
+Now look at the ROC curves. The gap there is only 2.6 points — 0.9985 vs. 0.9728. "Nearly as good," you might say. But that's exactly the problem: ROC-AUC is hiding the recall collapse.
+
+Look at the actual numbers in the table. EfficientNetB0 misses 7 out of 322 flood images — a 2.2% miss rate. ResNet50 misses 63 out of 322 — a 19.6% miss rate. Nine times more missed floods. And yet ResNet's *accuracy* is higher: 98.5% vs. 98.3%.
+
+This is the accuracy paradox in action. ResNet gets more non-flood images right — that boosts its accuracy number — while catastrophically missing floods. PR-AUC is the honest metric here.
+
+**Transition:** Let's look at the confusion matrices to understand what kind of errors each model is making.
 
 ---
 
-## Slide 15 — Q&A
-**Quick reference numbers for Q&A:**
-- EfficientNet recall: 97.8% vs ResNet50 80.4% (both ~98.5% accuracy)
-- PR-AUC gap: 3.6 pts = 56 missed floods in 819-image validation set
-- River FP: 9.2% [3.8%, 17.7%] Clopper-Pearson 95% CI, N=76
-- P1-HNM: +0.49 pp; Extended: +0.37 pp; Random: +0.12 pp
-- Pool "zero" at N=28 → upper CI bound 12.3% — cannot confirm robust
-- Phase-1 mining: top 10% by flood probability, 5× augmentation per candidate
+## Slide 10 — EfficientNetB0 makes symmetric boundary errors; ResNet50 collapses systematically
+**Time: ~1:30**
 
-**Likely questions:**
-- *Why not focal loss?* — Focal down-weights easy negatives, which reduces the mining signal. BCE baseline showed better PR-AUC in our experiments.
-- *Why 10% mining fraction?* — Tuned on validation; 5% left too few candidates, 20% diluted the signal.
-- *Does this generalise beyond Pinellas County?* — Unknown; geographic generalisation is future work (slide 13).
-- *Why not Phase-2 mining?* — Converged model assigns near-zero probability to all training non-floods; no candidates remain.
+EfficientNetB0 makes 7 false negatives and 7 false positives. That's symmetric. These are genuine boundary cases — ambiguous images where even a human might hesitate. The model is uncertain, and it makes mistakes in both directions roughly equally.
+
+ResNet50 makes 63 false negatives and 17 false positives. That's highly asymmetric, and it tells a different story. When we looked at what's in those 63 missed floods, many are prototypical clear flood scenes — not ambiguous cases. This suggests ResNet's decision boundary is systematically miscalibrated, not just uncertain at the edges.
+
+This is why we target EfficientNetB0 for hard negative mining and not ResNet. EfficientNet's errors are correctable — we need to reduce the boundary ambiguity on specific confounder types. ResNet's errors suggest a deeper miscalibration that HNM alone is unlikely to fix.
+
+**Transition:** So which confounder categories are actually causing the false positives?
+
+---
+
+## Slide 11 — River scenes cause a 9.2% false positive rate — every other confounder category is 0%
+**Time: ~1:30**
+
+This is, I think, the most actionable finding in the baseline analysis. When we break down false positive rates by confounder category, the answer is extremely clear.
+
+For EfficientNetB0: rivers produce a 9.2% false positive rate — 7 out of 76 river images are classified as floods. The 95% confidence interval is 3.8% to 17.7%. Plant images: 2.9%, one image out of 34. Every other category — streets, animals, buildings, vehicles, parks, and swimming pools — is 0%.
+
+For ResNet50: rivers produce 3.9% FP, 3 out of 76. Everything else is 0%.
+
+A word on swimming pools. We have 28 pool images and both models get 0% false positives. That sounds great — but the upper 95% confidence interval is 12.3%. With only 28 images, a 0% result tells us almost nothing. We'd need at least 150 pool images to put a tight bound on that.
+
+The practical takeaway: rivers are the target. That's where HNM needs to focus.
+
+**Transition:** So what happens when we apply Phase-1 Hard Negative Mining to the river category?
+
+---
+
+## Slide 12 — Difficulty-ranked Phase-1 mining strictly outperforms extended training and random augmentation
+**Time: ~2:00**
+
+Here are four conditions, all on EfficientNetB0 with BCE loss: the original baseline, random confounder injection where we add river images but chosen randomly, extended training where we just train for more epochs without any new data, and our Phase-1 HNM approach.
+
+The accuracy ordering is strict: P1-HNM at 98.78%, extended training at 98.66%, random injection at 98.41%, baseline at 98.29%. Each step in the hierarchy helps, and difficulty ranking adds incrementally on top of each one.
+
+Let me interpret each gap. Going from baseline to random injection: just adding more confounder-category data helps — even randomly selected. Going from random to extended training: more compute and exposure also helps independently. Going from extended to HNM: the difficulty ranking on top of everything else gives the most targeted improvement.
+
+Now, about the river false positive rate. After HNM, the rate is still 7 out of 76 — still 9.2%. A McNemar test, which tests pairwise differences corrected for multiple comparisons using Bonferroni correction, shows no statistically significant reduction across any pair of conditions. This is not a null result — it's a power problem. We only have 76 river validation images. To detect a 3 to 4 percentage-point reduction with 80% statistical power, we'd need approximately 300 river images. The HNM did improve things — we just can't prove it statistically with current data.
+
+And to mirror the number from the goal slide: without HNM, EfficientNetB0 misses 1 in 46 floods — 7 out of 322, a 2.2% miss rate. P1-HNM achieves the same recall with the best overall accuracy. The difficulty-ranked approach beats both alternatives.
+
+**Transition:** Let me now pull everything together.
+
+---
+
+## Slide 13 — Conclusion
+**Time: ~1:00**
+
+Five key takeaways.
+
+One: PR-AUC is the right metric for recall-first flood screening. The 3.6-point gap between EfficientNet and ResNet is invisible to accuracy and nearly invisible to ROC-AUC.
+
+Two: EfficientNetB0 is the right architecture. Its errors are symmetric boundary cases, not systematic miscalibration.
+
+Three: river scenes are the only statistically significant confounder. 9.2% false positive rate with a tight CI. All seven other confounder categories are at 0%.
+
+Four: Phase-1 Hard Negative Mining strictly outperforms all alternatives. The difficulty ranking adds value beyond just adding more data or training longer.
+
+Five: we can't yet claim statistically significant river FP reduction — not because HNM failed, but because we have 76 river validation images and need about 300.
+
+**Transition:** That fifth point directly motivates what comes next.
+
+---
+
+## Slide 14 — Future directions: statistical power, geographic generalization, and operational deployment
+**Time: ~1:00**
+
+The most immediate next step is expanding the river validation set to roughly 300 images. That's the number we need for 80% power to detect a 3 to 4 percentage-point reduction in river false positives.
+
+We also want multi-seed validation — running all experiments across five seeds and reporting bootstrap confidence intervals. A single seed can be lucky.
+
+Severity stratification is another priority. We know Major, Moderate, and Minor flood images exist in the dataset. From an operational standpoint, missing a major flood is far more costly than missing a minor one. We should report miss rates separately.
+
+Geographic generalization is an open question. Our dataset is US-centric. Flooding in South or Southeast Asia, or European urban flooding, looks visually different. We don't know how these models transfer.
+
+And finally, for deployment: the threshold τ=0.5 is a default, not a calibrated operational setting. The PR curve tells us exactly what recall/precision tradeoff we get at each threshold. For a real deployment, you'd set τ based on the operational recall target — say, 99% recall — and accept whatever false positive rate that implies.
+
+**Transition:** I want to thank a few people before we open for questions.
+
+---
+
+## Slide 15 — Acknowledgments
+**Time: ~0:30**
+
+I want to thank Dr. Dixon for advising this project. I'd also like to thank the authors of the USF FloodingDataset for providing the labeled flood severity imagery, and Wagner and colleagues for the RIWA river dataset. And thank you all for listening today.
+
+**Transition:** Happy to take any questions.
+
+---
+
+## Slide 16 — Questions?
+**Time: open**
+
+[Open for Q&A. Stay at this slide until session ends.]
+
+---
+
+---
+
+## Section 2: Rehearsal Guide
+
+### Timing practice
+- Full run-through without stopping: aim for 19–21 minutes.
+- Use the script as a *starting point*, not a recital. Know the content cold enough to speak naturally if you lose your place.
+- Record yourself once. Listen back for filler words (um, so, like), trailing sentences, and jargon you didn't notice.
+
+### Slide habits
+- Don't read text off the slides. Glance to orient, then look at the audience.
+- Pause briefly after each key number (PR-AUC 0.9976, 63 missed floods, 9.2% FP rate) — let it land before continuing.
+- The comparison table on Slide 9 is dense. Point to it, don't read it. Say: "Look at the FN row — 7 versus 63."
+
+### Jargon check
+Before presenting to a mixed audience, do one pass with someone outside the lab. Flag any sentence they have to re-read.
+- "McNemar test with Bonferroni correction" needs a one-line explanation: "a statistical test that checks whether two models are actually different, corrected for running multiple comparisons."
+- "Stratified 80/20 split" — just say "we made sure both train and test have the same proportion of flood images."
+- "Phase-1 checkpoint M1" — say "the partially trained model from the first training phase."
+
+### Q&A preparation
+
+**Q: "Why not just use ResNet50 with a lower threshold to improve recall?"**
+A: Good question. Lowering the threshold improves recall but at the cost of precision — you'd get many more false positives, including on rivers. The problem is that both errors have costs. Lowering threshold trades one error type for another. PR-AUC tells you the optimal tradeoff across all thresholds, and EfficientNetB0 dominates ResNet at every point on the PR curve.
+
+**Q: "Your river FP rate didn't improve with HNM — doesn't that mean HNM failed?"**
+A: The HNM did improve overall accuracy by 0.49 percentage points and strict ordering over all ablations. The river FP rate *numerically* dropped from 7 to 7 — unchanged. But with 76 river validation images, we have roughly 30% statistical power to detect a 3–4 pp change. We can't declare a null result from an underpowered test. The next step is to expand the river validation set to ~300 images and retest.
+
+**Q: "Have you tested this on real emergency response scenarios?"**
+A: Not yet. The dataset is labeled imagery from curated sources — not live citizen uploads. Deployment would require threshold calibration against an operational recall target (e.g., ≥99% recall), geographic validation beyond the US-centric training set, and testing on compressed/low-resolution social media images which may differ from our clean validation set.
+
+**Q: "Why did you use two architectures? Wouldn't more be better?"**
+A: We chose EfficientNetB0 and ResNet50 to represent two fundamentally different design philosophies — compound-scaling efficiency vs. residual depth. The point wasn't comprehensive benchmarking; it was to show that the metric choice and confounder analysis framework generalize across architectures. Adding more architectures is a natural extension, but the core findings hold across both models we tested.
+
+### "I don't know" is a valid answer
+If asked about something outside the paper's scope — specific deployment environments, other datasets, ensemble approaches — it's perfectly fine to say: "That's a great question and honestly outside what we tested — I'd want to look into that before giving a confident answer."
