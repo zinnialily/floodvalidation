@@ -35,7 +35,6 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -45,12 +44,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import average_precision_score
-from sklearn.utils.class_weight import compute_class_weight
-from tensorflow.keras.losses import BinaryFocalCrossentropy
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import (
-    ImageDataGenerator,
     img_to_array,
     load_img,
     save_img,
@@ -63,9 +59,17 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (  # noqa: E402
     PREPROCESS_FN,
+    BATCH_SIZE,
+    IMG_SIZE,
+    best_epoch_metrics,
     build_callbacks,
+    build_generators,
+    compute_class_weights,
     freeze_for_phase1,
     freeze_for_phase2,
+    get_loss,
+    parse_phase_boundary,
+    print_runtime_env,
     set_all_seeds,
     verify_preprocessing,
 )
@@ -74,9 +78,6 @@ from utils import (  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-BATCH_SIZE: int = 32
-IMG_SIZE: Tuple[int, int] = (224, 224)
-
 HNM_PHASE1_LR: float = 5e-5
 HNM_PHASE1_EPOCHS: int = 15
 HNM_PHASE2_LR: float = 1e-5
@@ -149,7 +150,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--top_pct",
-        default=0.10,
+        default=0.20,
         type=float,
         help="Top percentage to mine in percentile mode (0.0-1.0).",
     )
@@ -197,66 +198,6 @@ def parse_args() -> argparse.Namespace:
         help="Directory containing mining_candidates_{arch}.txt (from analyze_confounders.py).",
     )
     return parser.parse_args()
-
-
-def parse_phase_boundary(value: str) -> Tuple[int, int]:
-    """Parse a 'n_trainable,n_frozen' string into a tuple of ints.
-
-    Args:
-        value: Comma-separated string with exactly two positive integers.
-
-    Returns:
-        Tuple (n_trainable, n_frozen).
-
-    Raises:
-        argparse.ArgumentTypeError: If parsing fails.
-    """
-    parts = value.split(",")
-    if len(parts) != 2:
-        raise argparse.ArgumentTypeError(
-            f"--phase_boundary must be 'n_trainable,n_frozen', got '{value}'"
-        )
-    try:
-        n_trainable, n_frozen = int(parts[0].strip()), int(parts[1].strip())
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError(
-            f"Both values in --phase_boundary must be integers, got '{value}'"
-        ) from exc
-    if n_trainable <= 0 or n_frozen <= 0:
-        raise argparse.ArgumentTypeError(
-            f"Both phase_boundary values must be > 0, got {n_trainable}, {n_frozen}"
-        )
-    return n_trainable, n_frozen
-
-
-def get_loss(args: argparse.Namespace):
-    """Return the loss function based on CLI args."""
-    if args.loss == "focal":
-        return BinaryFocalCrossentropy(gamma=args.focal_gamma, from_logits=False)
-    return "binary_crossentropy"
-
-
-# ---------------------------------------------------------------------------
-# Runtime environment check
-# ---------------------------------------------------------------------------
-
-
-def print_runtime_env() -> None:
-    """Print GPU info, TensorFlow version, and Python version."""
-    print("=" * 60)
-    print("Runtime environment")
-    print("=" * 60)
-    try:
-        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
-        if result.returncode == 0:
-            print(result.stdout[:600])
-        else:
-            print("nvidia-smi not available (CPU-only runtime or no driver).")
-    except FileNotFoundError:
-        print("nvidia-smi not found (macOS / CPU-only runtime).")
-    print(f"TensorFlow version : {tf.__version__}")
-    print(f"Python version     : {sys.version}")
-    print("=" * 60)
 
 
 # ---------------------------------------------------------------------------
@@ -477,110 +418,6 @@ def cleanup_hnm_dir(hnm_dir: str) -> None:
         shutil.rmtree(hnm_dir)
 
 
-# ---------------------------------------------------------------------------
-# Generator and class weight helpers
-# ---------------------------------------------------------------------------
-
-
-def build_generators(
-    train_dir: str,
-    val_dir: str,
-    arch: str,
-    seed: int,
-) -> Tuple:
-    """Create training and validation ImageDataGenerators.
-
-    Training generator applies augmentation matching the baseline protocol.
-    Validation generator applies only preprocessing. Neither uses rescale.
-
-    Args:
-        train_dir: Path to the training split root.
-        val_dir: Path to the validation split root.
-        arch: Architecture key for preprocessing function.
-        seed: Random seed.
-
-    Returns:
-        Tuple (train_gen, val_gen) of DirectoryIterators.
-    """
-    preprocess_fn = PREPROCESS_FN[arch]
-
-    train_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_fn,
-        rotation_range=15,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        horizontal_flip=True,
-        zoom_range=0.2,
-        brightness_range=[0.8, 1.2],
-        fill_mode="reflect",
-    )
-
-    val_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_fn,
-    )
-
-    train_gen = train_datagen.flow_from_directory(
-        train_dir,
-        target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        class_mode="binary",
-        shuffle=True,
-        seed=seed,
-    )
-
-    val_gen = val_datagen.flow_from_directory(
-        val_dir,
-        target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        class_mode="binary",
-        shuffle=False,
-        seed=seed,
-    )
-
-    return train_gen, val_gen
-
-
-def compute_class_weights(train_gen) -> Dict[int, float]:
-    """Compute balanced class weights from the training generator.
-
-    Args:
-        train_gen: DirectoryIterator with a populated classes attribute.
-
-    Returns:
-        Dict mapping class index to weight.
-    """
-    classes_array = train_gen.classes
-    unique_classes = np.unique(classes_array)
-    weights = compute_class_weight(
-        class_weight="balanced",
-        classes=unique_classes,
-        y=classes_array,
-    )
-    class_weight_dict = dict(zip(unique_classes.tolist(), weights.tolist()))
-    print(f"Class weights: {class_weight_dict}")
-    return class_weight_dict
-
-
-# ---------------------------------------------------------------------------
-# Metric helpers
-# ---------------------------------------------------------------------------
-
-
-def _best_epoch_metrics(history, monitor: str = "val_loss") -> Dict:
-    """Extract metrics at the best epoch by monitored value.
-
-    Args:
-        history: Keras History object.
-        monitor: Metric to minimise.
-
-    Returns:
-        Dict of metric name -> value at best epoch.
-    """
-    hist = history.history
-    best_epoch = int(np.argmin(hist[monitor]))
-    return {k: hist[k][best_epoch] for k in hist}
-
-
 def evaluate_val_metrics(
     model: tf.keras.Model,
     val_gen,
@@ -741,7 +578,7 @@ def train_hnm_phases(
     )
 
     # Print summary.
-    p1_best = _best_epoch_metrics(history_p1, monitor="val_loss")
+    p1_best = best_epoch_metrics(history_p1, monitor="val_loss")
     print(f"\n[INFO] Phase 1 best epoch metrics:")
     for k, v in p1_best.items():
         print(f"  {k:<25s} {v:.6f}")
@@ -921,8 +758,8 @@ def run_percentile_mode(
 
     # 9. Reload model from checkpoint (fresh start for retraining).
     model = tf.keras.models.load_model(args.model_path)
-    # Extract base_model (the backbone sub-model).
-    base_model = model.layers[1]  # backbone is the second layer after Input
+    backbone_name = "efficientnetb0" if args.arch == "efficientnet" else "resnet50"
+    base_model = model.get_layer(backbone_name)
 
     # 10. Train.
     os.makedirs(output_dir, exist_ok=True)
@@ -1045,7 +882,8 @@ def run_sweep_mode(
 
         # Reload model from checkpoint.
         model = tf.keras.models.load_model(args.model_path)
-        base_model = model.layers[1]
+        backbone_name = "efficientnetb0" if args.arch == "efficientnet" else "resnet50"
+        base_model = model.get_layer(backbone_name)
 
         # Freeze backbone entirely for head-only training.
         base_model.trainable = False
@@ -1152,7 +990,8 @@ def run_sweep_mode(
 
     # Reload model and run full training.
     model = tf.keras.models.load_model(args.model_path)
-    base_model = model.layers[1]
+    backbone_name = "efficientnetb0" if args.arch == "efficientnet" else "resnet50"
+    base_model = model.get_layer(backbone_name)
 
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
@@ -1244,7 +1083,8 @@ def run_random_injection_mode(
     # 7. Reload model from baseline checkpoint.
     print(f"\n[INFO] Loading baseline model from: {args.model_path}")
     model = tf.keras.models.load_model(args.model_path)
-    base_model = model.layers[1]
+    backbone_name = "efficientnetb0" if args.arch == "efficientnet" else "resnet50"
+    base_model = model.get_layer(backbone_name)
 
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
@@ -1294,7 +1134,7 @@ def run_no_injection_mode(
     """
     data_dir = os.path.abspath(args.data_dir)
     output_dir = os.path.abspath(args.output_dir)
-    log_dir = os.path.join("results", "logs")
+    log_dir = os.path.join(os.path.abspath(args.results_dir), "logs")
 
     binary_dir = os.path.join(data_dir, "processed_data", "binary")
     train_dir = os.path.join(binary_dir, "train")
@@ -1312,7 +1152,8 @@ def run_no_injection_mode(
     # Load model from same starting weights.
     print(f"\n[INFO] Loading baseline model from: {args.model_path}")
     model = tf.keras.models.load_model(args.model_path)
-    base_model = model.layers[1]
+    backbone_name = "efficientnetb0" if args.arch == "efficientnet" else "resnet50"
+    base_model = model.get_layer(backbone_name)
 
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)

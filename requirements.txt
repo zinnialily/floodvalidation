@@ -1,0 +1,28 @@
+# Core ML framework
+tensorflow>=2.16,<2.18
+
+# Numerical / data
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
+scipy>=1.12
+
+# Visualization
+matplotlib>=3.8
+seaborn>=0.13
+
+# Image processing
+Pillow>=10.0
+
+# Model interpretability
+tf-keras-vis>=0.8
+umap-learn>=0.5
+
+# Data / dataset utilities
+gdown>=4.7
+huggingface_hub>=0.20
+datasets>=2.18
+
+# Networking / progress
+requests>=2.31
+tqdm>=4.66

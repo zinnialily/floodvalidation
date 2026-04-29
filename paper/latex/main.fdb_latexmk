@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex main"] 1776357490.13424 "main.aux" "main.bbl" "main" 1776357490.20958 2
-  "./main.bib" 1775584095.13731 11390 60d2358f4c1f2be5f7c91cabc253afab ""
+["bibtex main"] 1777295824.66539 "main.aux" "main.bbl" "main" 1777295824.73991 2
+  "./main.bib" 1776435031.98911 11389 44d3ebd072a56bda12d67c75ae490de6 ""
   "/usr/local/texlive/2026/texmf-dist/bibtex/bst/elsarticle/elsarticle-harv.bst" 1767996394 30002 8c3d766e7980d576fdc8329774bbf7b2 ""
-  "main.aux" 1776357489.7861 31791 83a4d0f12d4dd87c8b48a4356e0223e4 "pdflatex"
+  "main.aux" 1777295824.34882 31939 1efacac56698b3ed8399f03c4256d3be "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1776357488.13452 "main.tex" "main.pdf" "main" 1776357490.20965 0
+["pdflatex"] 1777295822.63972 "main.tex" "main.pdf" "main" 1777295824.73998 0
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -252,18 +252,18 @@
   "figures/baselines/efficientnet_bce/pr_roc_curves.png" 1775062706.38714 83089 1e31548ae9ada098d7f4fe01ee8234a7 ""
   "figures/baselines/efficientnet_bce/training_curves.png" 1775062706.08477 159166 8aa7b7c51b729c3b341548c43abcf85c ""
   "figures/baselines/efficientnet_focal/confusion_matrix.png" 1775062689.97103 41483 218ee2bafe3d77d7502718209a9693c2 ""
-  "figures/baselines/resnet50_bce/confusion_matrix.png" 1775062674.76271 43984 26fb4765f6a580039e009cfce265a26e ""
-  "figures/baselines/resnet50_bce/fp_fn_examples.png" 1775062678.42459 922797 4e24d699198730ebac7aa9ae0948dd46 ""
-  "figures/baselines/resnet50_bce/pr_roc_curves.png" 1775062675.67382 89725 84471a86f565dddbbb6595a311b98646 ""
+  "figures/baselines/resnet50_bce/confusion_matrix.png" 1776642179.20993 42622 1b55ba9cfb016002009bf718180374e7 ""
+  "figures/baselines/resnet50_bce/fp_fn_examples.png" 1776642179.94272 630645 2c4fdd0ee6458e3ac21aa5839a333eb3 ""
+  "figures/baselines/resnet50_bce/pr_roc_curves.png" 1776642179.33096 83319 434182b855323e3204eadb105f2da63d ""
   "figures/baselines/resnet50_focal/confusion_matrix.png" 1775062697.4534 44002 b124c6583e26bef73de39f7c238333ed ""
-  "figures/confounder_fp_comparison.pdf" 1775412879.20304 33425 a6840139f30940e96202feb14520fa45 ""
-  "figures/confounder_fp_heatmap.pdf" 1775412879.45147 31761 b42e241362fa9fb0d8302b933c025eb5 ""
+  "figures/confounder_fp_comparison.pdf" 1776644452.78808 33663 476329edc19ae175ea9535d90efd0736 ""
+  "figures/confounder_fp_heatmap.pdf" 1776644453.40071 33870 b65ec59970e22d5aac91dd07dbcc6cfb ""
   "figures/hnm/efficientnet_bce/pr_roc_curves.png" 1775139714.85716 83364 15eaf8038531ad00a90b549ea7628602 ""
-  "main.aux" 1776357489.7861 31791 83a4d0f12d4dd87c8b48a4356e0223e4 "pdflatex"
-  "main.bbl" 1776357490.20883 11253 05a760cb3ba36fcb8bf98c3d8f69b4ed "bibtex main"
-  "main.out" 1776357489.78722 7877 2013b159e97fbddee61f2a431acee601 "pdflatex"
-  "main.spl" 1776357488.26339 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.tex" 1775616592.25783 95087 013ae0351b187bf896b515567f2ad5ae ""
+  "main.aux" 1777295824.34882 31939 1efacac56698b3ed8399f03c4256d3be "pdflatex"
+  "main.bbl" 1777295824.73912 11170 703b84da2ef54b3489cb5958af655a7f "bibtex main"
+  "main.out" 1777295824.35006 7778 7261cd36dc92378863d49a89267fb5d8 "pdflatex"
+  "main.spl" 1777295822.81148 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.tex" 1777295440.00169 94604 b99e8a79eb866b1b5d9c3ea4863a1cc3 ""
   (generated)
   "main.aux"
   "main.log"

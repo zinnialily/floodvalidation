@@ -1,5 +1,5 @@
 """
-build_splits.py -- Build the stratified 70/15/15 train/val/test binary split.
+build_splits.py -- Build the stratified 80/20 train/val binary split.
 
 Reads from three source trees:
   data/FloodingDataset2/StreetFloodClasses/
@@ -15,12 +15,13 @@ Reads from three source trees:
 
 Outputs:
   data/FloodingDataset2/processed_data/binary/
-      train/flood/<category>/       val/flood/<category>/       test/flood/<category>/
-      train/non_flood/<category>/   val/non_flood/<category>/   test/non_flood/<category>/
+      train/flood/<category>/       val/flood/<category>/
+      train/non_flood/<category>/   val/non_flood/<category>/
 
-  data/FloodingDataset2/processed_data/binary/{train,val,test}/metadata.csv
+  data/FloodingDataset2/processed_data/binary/{train,val}/metadata.csv
   data/FloodingDataset2/split_manifest.csv   ← full audit trail
 
+No test split is held out; all reported metrics are on the validation set.
 The split is deterministic: seeded with SPLIT_SEED=42.
 Files are copied (not symlinked) so the binary/ tree is self-contained.
 
@@ -39,9 +40,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# Default split parameters — overridable via CLI (--seed, --val_frac)
 SPLIT_SEED = 42
-VAL_FRAC = 0.15
-TEST_FRAC = 0.15
+VAL_FRAC   = 0.20
 
 # StreetFloodClasses subdirs → binary label (kept for reference)
 FLOOD_CATS = {"MajorFlood", "ModerateFlood", "MinorFlood"}
@@ -85,22 +86,20 @@ def _collect_images(directory: Path) -> list[Path]:
 def _split_category(
     images: list[Path],
     rng: np.random.Generator,
-) -> tuple[list[Path], list[Path], list[Path]]:
-    """Shuffle and split image list into (train, val, test) sublists."""
+    val_frac: float = VAL_FRAC,
+) -> tuple[list[Path], list[Path]]:
+    """Shuffle and split image list into (train, val) sublists."""
     n = len(images)
     indices = rng.permutation(n)
 
-    n_val = max(1, round(n * VAL_FRAC))
-    n_test = max(1, round(n * TEST_FRAC))
+    n_val = max(1, round(n * val_frac))
 
     val_idx = indices[:n_val]
-    test_idx = indices[n_val : n_val + n_test]
-    train_idx = indices[n_val + n_test :]
+    train_idx = indices[n_val:]
 
     return (
         [images[i] for i in train_idx],
         [images[i] for i in val_idx],
-        [images[i] for i in test_idx],
     )
 
 
@@ -109,9 +108,14 @@ def _dest(binary_dir: Path, split: str, label: str, category: str) -> Path:
     return binary_dir / split / label / category
 
 
-def build_splits(data_dir: Path, dry_run: bool = False) -> None:
+def build_splits(
+    data_dir: Path,
+    dry_run: bool = False,
+    split_seed: int = SPLIT_SEED,
+    val_frac: float = VAL_FRAC,
+) -> None:
     """Run the full split pipeline."""
-    rng = np.random.default_rng(seed=SPLIT_SEED)
+    rng = np.random.default_rng(seed=split_seed)
 
     binary_dir = data_dir / "processed_data" / "binary"
 
@@ -142,9 +146,9 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
                 print(f"  [SKIP] {cat_name}: no images found")
                 continue
 
-            train_imgs, val_imgs, test_imgs = _split_category(images, rng)
+            train_imgs, val_imgs = _split_category(images, rng, val_frac)
 
-            for split_name, imgs in [("train", train_imgs), ("val", val_imgs), ("test", test_imgs)]:
+            for split_name, imgs in [("train", train_imgs), ("val", val_imgs)]:
                 dest_dir = _dest(binary_dir, split_name, label, category)
                 if not dry_run:
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -162,7 +166,7 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
 
             print(
                 f"  {cat_name:<25} label={label:<9}  n={len(images):>4}  "
-                f"train={len(train_imgs):>3}  val={len(val_imgs):>3}  test={len(test_imgs):>3}"
+                f"train={len(train_imgs):>3}  val={len(val_imgs):>3}"
             )
 
     # ── 2. junk/ (water confounders) ─────────────────────────────────────────
@@ -186,9 +190,9 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
                 print(f"  [SKIP] junk/{cat_name}: no images found")
                 continue
 
-            train_imgs, val_imgs, test_imgs = _split_category(images, rng)
+            train_imgs, val_imgs = _split_category(images, rng, val_frac)
 
-            for split_name, imgs in [("train", train_imgs), ("val", val_imgs), ("test", test_imgs)]:
+            for split_name, imgs in [("train", train_imgs), ("val", val_imgs)]:
                 dest_dir = _dest(binary_dir, split_name, "non_flood", category)
                 if not dry_run:
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -206,7 +210,7 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
 
             print(
                 f"  junk/{cat_name:<20} label=non_flood  n={len(images):>4}  "
-                f"train={len(train_imgs):>3}  val={len(val_imgs):>3}  test={len(test_imgs):>3}"
+                f"train={len(train_imgs):>3}  val={len(val_imgs):>3}"
             )
 
     # ── 3. extracted/junk/ (building images) ────────────────────────────────
@@ -228,9 +232,9 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
                 print(f"  [SKIP] extracted/junk/{subdir_name}: no images")
                 continue
 
-            train_imgs, val_imgs, test_imgs = _split_category(images, rng)
+            train_imgs, val_imgs = _split_category(images, rng, val_frac)
 
-            for split_name, imgs in [("train", train_imgs), ("val", val_imgs), ("test", test_imgs)]:
+            for split_name, imgs in [("train", train_imgs), ("val", val_imgs)]:
                 dest_dir = _dest(binary_dir, split_name, "non_flood", category)
                 if not dry_run:
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -251,7 +255,7 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
 
             print(
                 f"  extracted/junk/{subdir_name:<15} label=non_flood  n={len(images):>4}  "
-                f"train={len(train_imgs):>3}  val={len(val_imgs):>3}  test={len(test_imgs):>3}"
+                f"train={len(train_imgs):>3}  val={len(val_imgs):>3}"
             )
 
     if not records:
@@ -264,7 +268,7 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
     # Write per-split metadata.csv for HuggingFace ImageFolder format.
     # file_name is relative to the split folder (e.g. non_flood/river/River_0001.jpg).
     # Always compute and print metadata paths, even in dry_run, so paths can be verified.
-    for split_name in ["train", "val", "test"]:
+    for split_name in ["train", "val"]:
         split_df = manifest[manifest["split"] == split_name].copy()
         if split_df.empty:
             continue
@@ -291,8 +295,8 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
         .size()
         .unstack(fill_value=0)
     )
-    if set(["train", "val", "test"]).issubset(summary.columns):
-        summary = summary[["train", "val", "test"]]
+    if set(["train", "val"]).issubset(summary.columns):
+        summary = summary[["train", "val"]]
     summary["total"] = summary.sum(axis=1)
 
     print("\nSplit summary:")
@@ -302,13 +306,25 @@ def build_splits(data_dir: Path, dry_run: bool = False) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build stratified 70/15/15 binary split for FloodingDataset2.",
+        description="Build stratified binary split for FloodingDataset2.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--data_dir",
         default="./data/FloodingDataset2",
         help="Dataset root containing StreetFloodClasses/ and junk/.",
+    )
+    parser.add_argument(
+        "--seed",
+        default=SPLIT_SEED,
+        type=int,
+        help="Random seed for the stratified split.",
+    )
+    parser.add_argument(
+        "--val_frac",
+        default=VAL_FRAC,
+        type=float,
+        help="Fraction of each category assigned to the validation split.",
     )
     parser.add_argument(
         "--dry_run",
@@ -321,9 +337,16 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     data_dir = Path(args.data_dir).resolve()
-    print(f"[INFO] Dataset root: {data_dir}")
-    print(f"[INFO] Dry run: {args.dry_run}\n")
-    build_splits(data_dir, dry_run=args.dry_run)
+    print(f"[INFO] Dataset root : {data_dir}")
+    print(f"[INFO] Seed         : {args.seed}")
+    print(f"[INFO] Val frac     : {args.val_frac}")
+    print(f"[INFO] Dry run      : {args.dry_run}\n")
+    build_splits(
+        data_dir,
+        dry_run=args.dry_run,
+        split_seed=args.seed,
+        val_frac=args.val_frac,
+    )
     print("\n[DONE] build_splits.py completed.")
 
 

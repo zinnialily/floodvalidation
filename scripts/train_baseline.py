@@ -15,17 +15,13 @@ Dependencies: tensorflow>=2.16, scikit-learn, numpy.
 
 import argparse
 import os
-import subprocess
 import sys
 from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
-from sklearn.utils.class_weight import compute_class_weight
-from tensorflow.keras.losses import BinaryFocalCrossentropy
 from tensorflow.keras.metrics import AUC, Precision, Recall
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # ---------------------------------------------------------------------------
 # Path setup: allow running as a top-level script (python scripts/train_baseline.py)
@@ -33,9 +29,15 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     PREPROCESS_FN,
+    best_epoch_metrics,
     build_callbacks,
+    build_generators,
     build_model,
+    compute_class_weights,
     freeze_for_phase2,
+    get_loss,
+    parse_phase_boundary,
+    print_runtime_env,
     set_all_seeds,
     verify_preprocessing,
 )
@@ -44,8 +46,6 @@ from utils import (
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-BATCH_SIZE: int = 32
-IMG_SIZE: tuple[int, int] = (224, 224)
 PHASE1_LR: float = 1e-4
 PHASE2_LR: float = 1e-5
 PHASE1_MAX_EPOCHS: int = 15
@@ -124,183 +124,6 @@ def parse_args() -> argparse.Namespace:
         help="Path to a Phase 1 checkpoint to load and skip directly to Phase 2.",
     )
     return parser.parse_args()
-
-
-def parse_phase_boundary(value: str) -> tuple[int, int]:
-    """Parse a 'n_trainable,n_frozen' string into a tuple of ints.
-
-    Args:
-        value: Comma-separated string with exactly two positive integers.
-
-    Returns:
-        Tuple ``(n_trainable, n_frozen)``.
-
-    Raises:
-        argparse.ArgumentTypeError: If the string cannot be parsed or values
-            are not positive integers.
-    """
-    parts = value.split(",")
-    if len(parts) != 2:
-        raise argparse.ArgumentTypeError(
-            f"--phase_boundary must be 'n_trainable,n_frozen', got '{value}'"
-        )
-    try:
-        n_trainable, n_frozen = int(parts[0].strip()), int(parts[1].strip())
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError(
-            f"Both values in --phase_boundary must be integers, got '{value}'"
-        ) from exc
-    if n_trainable <= 0 or n_frozen <= 0:
-        raise argparse.ArgumentTypeError(
-            f"Both phase_boundary values must be > 0, got {n_trainable}, {n_frozen}"
-        )
-    return n_trainable, n_frozen
-
-
-def get_loss(args: argparse.Namespace):
-    """Return the loss function based on CLI args."""
-    if args.loss == "focal":
-        return BinaryFocalCrossentropy(gamma=args.focal_gamma, from_logits=False)
-    return "binary_crossentropy"
-
-
-# ---------------------------------------------------------------------------
-# Runtime environment check
-# ---------------------------------------------------------------------------
-
-
-def print_runtime_env() -> None:
-    """Print GPU info, TensorFlow version, and Python version."""
-    print("=" * 60)
-    print("Runtime environment")
-    print("=" * 60)
-    try:
-        result = subprocess.run(
-            ["nvidia-smi"], capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            print(result.stdout[:600])
-        else:
-            print("nvidia-smi not available (CPU-only runtime or no driver).")
-    except FileNotFoundError:
-        print("nvidia-smi not found (macOS Metal or CPU-only runtime).")
-    print(f"TensorFlow version : {tf.__version__}")
-    print(f"Python version     : {sys.version}")
-    print("=" * 60)
-
-
-# ---------------------------------------------------------------------------
-# Data generator factory
-# ---------------------------------------------------------------------------
-
-
-def build_generators(
-    train_dir: str,
-    val_dir: str,
-    arch: str,
-    seed: int,
-) -> tuple:
-    """Create training and validation ImageDataGenerators.
-
-    Training generator applies augmentation (rotation, shifts, flip, zoom,
-    brightness).  Validation generator applies only the backbone preprocessing
-    function.  Neither generator uses 'rescale' -- all normalisation is handled
-    by ``PREPROCESS_FN[arch]`` to avoid the double-rescaling bug.
-
-    Args:
-        train_dir: Path to the train split root (contains flood/ and non_flood/).
-        val_dir: Path to the val split root.
-        arch: Architecture key used to select the preprocessing function.
-        seed: Random seed for shuffling and augmentation.
-
-    Returns:
-        Tuple ``(train_gen, val_gen)`` of DirectoryIterators.
-    """
-    preprocess_fn = PREPROCESS_FN[arch]
-
-    train_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_fn,
-        rotation_range=15,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        horizontal_flip=True,
-        zoom_range=0.2,
-        brightness_range=[0.8, 1.2],
-        fill_mode="reflect",
-        # NOTE: no rescale -- preprocessing_function handles normalisation.
-    )
-
-    val_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_fn,
-        # No augmentation, no rescale.
-    )
-
-    train_gen = train_datagen.flow_from_directory(
-        train_dir,
-        target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        class_mode="binary",
-        shuffle=True,
-        seed=seed,
-    )
-
-    val_gen = val_datagen.flow_from_directory(
-        val_dir,
-        target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        class_mode="binary",
-        shuffle=False,
-        seed=seed,
-    )
-
-    return train_gen, val_gen
-
-
-# ---------------------------------------------------------------------------
-# Class weight computation
-# ---------------------------------------------------------------------------
-
-
-def compute_class_weights(train_gen) -> dict[int, float]:
-    """Compute balanced class weights from the training generator's label array.
-
-    Args:
-        train_gen: A DirectoryIterator with a populated ``classes`` attribute.
-
-    Returns:
-        Dictionary mapping class index to weight, e.g. ``{0: 1.2, 1: 0.85}``.
-    """
-    classes_array = train_gen.classes
-    unique_classes = np.unique(classes_array)
-    weights = compute_class_weight(
-        class_weight="balanced",
-        classes=unique_classes,
-        y=classes_array,
-    )
-    class_weight_dict = dict(zip(unique_classes.tolist(), weights.tolist()))
-    print(f"Class weights: {class_weight_dict}")
-    return class_weight_dict
-
-
-# ---------------------------------------------------------------------------
-# Metric helpers for post-training summary
-# ---------------------------------------------------------------------------
-
-
-def _best_epoch_metrics(history, monitor: str = "val_loss") -> dict:
-    """Extract metrics at the epoch with the best monitored value.
-
-    Args:
-        history: Keras History object returned by model.fit().
-        monitor: Metric name to minimise (``val_loss``) when selecting the
-            best epoch.
-
-    Returns:
-        Dictionary of metric name -> value at the best epoch.
-    """
-    hist = history.history
-    best_epoch = int(np.argmin(hist[monitor]))
-    return {k: hist[k][best_epoch] for k in hist}
 
 
 # ---------------------------------------------------------------------------
@@ -478,12 +301,12 @@ def main() -> None:
     print(f"{'='*60}")
 
     if not args.resume_phase2:
-        p1_best = _best_epoch_metrics(history_p1, monitor="val_loss")
+        p1_best = best_epoch_metrics(history_p1, monitor="val_loss")
         print("\nPhase 1 best epoch metrics (by val_loss):")
         for k, v in p1_best.items():
             print(f"  {k:<25s} {v:.6f}")
 
-    p2_best = _best_epoch_metrics(history_p2, monitor="val_loss")
+    p2_best = best_epoch_metrics(history_p2, monitor="val_loss")
     print("\nPhase 2 best epoch metrics (by val_loss):")
     for k, v in p2_best.items():
         print(f"  {k:<25s} {v:.6f}")

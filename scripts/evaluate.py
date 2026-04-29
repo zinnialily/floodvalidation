@@ -6,6 +6,9 @@ Produces metrics tables, bootstrap CIs, confusion matrix, PR/ROC curves,
 severity-stratified recall, swimming-pool FP analysis with Clopper-Pearson
 CIs, and optional McNemar's test for pairwise model comparison.
 
+All evaluation is performed on the validation set (binary/val/).
+No test split is held out; all reported metrics are on the validation set.
+
 Compute: Colab T4 GPU for inference; CPU for metrics and plots.
 Dependencies: tensorflow, numpy, pandas, scikit-learn, scipy, matplotlib,
               seaborn.  statsmodels is optional (McNemar fallback included).
@@ -23,7 +26,7 @@ import pandas as pd
 # Project imports
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.dirname(__file__))
-from utils import PREPROCESS_FN, set_all_seeds  # noqa: E402
+from utils import PREPROCESS_FN, clopper_pearson_ci, mcnemar_test, set_all_seeds  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -73,7 +76,7 @@ def parse_args() -> argparse.Namespace:
 
 
 # ---------------------------------------------------------------------------
-# Bootstrap confidence intervals
+# Bootstrap confidence intervals (local — not in utils as it is evaluate-specific)
 # ---------------------------------------------------------------------------
 
 
@@ -108,91 +111,6 @@ def bootstrap_ci(
     if len(scores) == 0:
         return (np.nan, np.nan)
     return float(np.percentile(scores, 2.5)), float(np.percentile(scores, 97.5))
-
-
-# ---------------------------------------------------------------------------
-# Clopper-Pearson exact binomial CI
-# ---------------------------------------------------------------------------
-
-
-def clopper_pearson_ci(
-    k: int, n: int, alpha: float = 0.05
-) -> Tuple[float, float]:
-    """Clopper-Pearson exact binomial confidence interval.
-
-    Args:
-        k: Number of successes (e.g. false positives).
-        n: Number of trials (e.g. total pool images).
-        alpha: Significance level (default 0.05 for 95 % CI).
-
-    Returns:
-        Tuple (lower, upper) bounds on the true rate.
-    """
-    from scipy.stats import beta as beta_dist
-
-    lo = beta_dist.ppf(alpha / 2, k, n - k + 1) if k > 0 else 0.0
-    hi = beta_dist.ppf(1 - alpha / 2, k + 1, n - k) if k < n else 1.0
-    return float(lo), float(hi)
-
-
-# ---------------------------------------------------------------------------
-# McNemar's test
-# ---------------------------------------------------------------------------
-
-
-def mcnemar_test(
-    correct_a: np.ndarray,
-    correct_b: np.ndarray,
-    alpha: float = 0.05,
-    n_comparisons: int = 1,
-) -> Dict[str, float]:
-    """Run McNemar's test with continuity correction.
-
-    Attempts to use statsmodels; falls back to manual scipy implementation.
-
-    Args:
-        correct_a: Boolean array -- True where model A was correct.
-        correct_b: Boolean array -- True where model B was correct.
-        alpha: Nominal significance level before Bonferroni correction.
-        n_comparisons: Number of pairwise comparisons for Bonferroni.
-
-    Returns:
-        Dict with keys: b, c, chi2, p_value, adjusted_alpha, significant.
-    """
-    # b: A correct, B wrong; c: A wrong, B correct
-    b = int(np.sum(correct_a & ~correct_b))
-    c = int(np.sum(~correct_a & correct_b))
-
-    try:
-        from statsmodels.stats.contingency_tables import mcnemar as _mcnemar
-
-        table = np.array(
-            [
-                [int(np.sum(correct_a & correct_b)), b],
-                [c, int(np.sum(~correct_a & ~correct_b))],
-            ]
-        )
-        result = _mcnemar(table, exact=False, correction=True)
-        chi2 = float(result.statistic)
-        p_value = float(result.pvalue)
-    except ImportError:
-        from scipy.stats import chi2 as chi2_dist
-
-        if (b + c) > 0:
-            chi2 = float((abs(b - c) - 1) ** 2 / (b + c))
-        else:
-            chi2 = 0.0
-        p_value = float(chi2_dist.sf(chi2, df=1))
-
-    adjusted_alpha = alpha / n_comparisons
-    return {
-        "b": b,
-        "c": c,
-        "chi2": chi2,
-        "p_value": p_value,
-        "adjusted_alpha": adjusted_alpha,
-        "significant": p_value < adjusted_alpha,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -366,8 +284,8 @@ def _compute_severity_recall(
     }
     severity_levels = {"MajorFlood", "ModerateFlood", "MinorFlood"}
 
-    # Strategy 1: Look for test_split.csv with a 'category' column.
-    split_csv = os.path.join(data_dir, "test_split.csv")
+    # Strategy 1: Look for val_split.csv with a 'category' column.
+    split_csv = os.path.join(data_dir, "val_split.csv")
     if os.path.exists(split_csv):
         df = pd.read_csv(split_csv)
         if "category" in df.columns and "path" in df.columns:
@@ -490,17 +408,17 @@ def main() -> None:
     # Startup assertions
     # ------------------------------------------------------------------
     data_dir = args.data_dir
-    test_dir = os.path.join(data_dir, "processed_data", "binary", "test")
-    assert "binary_hnm" not in str(test_dir), (
-        f"evaluate.py must load from original test partition, got: {test_dir}"
+    val_dir = os.path.join(data_dir, "processed_data", "binary", "val")
+    assert "binary_hnm" not in str(val_dir), (
+        f"evaluate.py must load from original val partition, got: {val_dir}"
     )
-    assert os.path.exists(test_dir), f"Test directory not found: {test_dir}"
+    assert os.path.exists(val_dir), f"Val directory not found: {val_dir}"
 
     model_name = os.path.splitext(os.path.basename(args.model_path))[0]
     print(f"\n{'=' * 60}")
     print(f"  Evaluation: {model_name}")
     print(f"  Architecture: {args.arch}")
-    print(f"  Test dir: {test_dir}")
+    print(f"  Val dir: {val_dir}")
     print(f"{'=' * 60}\n")
 
     # ------------------------------------------------------------------
@@ -521,9 +439,9 @@ def main() -> None:
     # Load test data -- NO rescale; preprocessing via PREPROCESS_FN
     # ------------------------------------------------------------------
     preprocess_fn = PREPROCESS_FN[args.arch]
-    test_datagen = ImageDataGenerator(preprocessing_function=preprocess_fn)
-    test_gen = test_datagen.flow_from_directory(
-        test_dir,
+    val_datagen = ImageDataGenerator(preprocessing_function=preprocess_fn)
+    test_gen = val_datagen.flow_from_directory(
+        val_dir,
         target_size=(224, 224),
         batch_size=32,
         class_mode="binary",
@@ -532,7 +450,7 @@ def main() -> None:
 
     # Class mapping: flood=0, non_flood=1 (alphabetical).
     print(f"  Class indices: {test_gen.class_indices}")
-    print(f"  Test samples: {test_gen.samples}")
+    print(f"  Val samples: {test_gen.samples}")
 
     # ------------------------------------------------------------------
     # Predictions

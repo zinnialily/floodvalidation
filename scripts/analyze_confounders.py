@@ -48,15 +48,6 @@ FP_DECISION_THRESHOLD: float = 0.5  # flood_prob > 0.5 → false positive (ranki
 
 VALID_ARCHS: List[str] = list(PREPROCESS_FN.keys())
 
-# Known category name prefixes in the non-flood training directory.
-# Used only as documentation; actual grouping is inferred from filenames.
-KNOWN_JUNK_PREFIXES: List[str] = [
-    "Cats", "Deers", "Dogs", "Motorcycle", "Plants", "Swimmingpool",
-    "building_exterior", "building_interior", "bus", "car",
-    "house_exterior", "Racoon", "NoFlood", "parks_walkways",
-    "River", "Lake", "Fountain",   # new external confounder categories
-]
-
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -89,7 +80,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--fp_threshold",
-        default=0.15,
+        default=0.05,
         type=float,
         help="FP rate threshold above which a category is flagged as a mining candidate.",
     )

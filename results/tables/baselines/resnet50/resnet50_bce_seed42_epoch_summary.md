@@ -19,18 +19,18 @@
 
 | Metric | Flood | Non-Flood | Weighted Avg |
 |--------|-------|-----------|--------------|
-| Precision | 0.9384 | 0.8840 | 0.9054 |
-| Recall    | 0.8043    | 0.9658    | 0.9023 |
-| F1-Score  | 0.8662  | 0.9231  | 0.9007 |
+| Precision | 0.9905 | 0.9821 | 0.9854 |
+| Recall    | 0.9720    | 0.9940    | 0.9853 |
+| F1-Score  | 0.9812  | 0.9880  | 0.9853 |
 
-**Confusion Matrix:** TP=259 | FP=17 | FN=63 | TN=480
+**Confusion Matrix:** TP=313 | FP=3 | FN=9 | TN=494
 
 ## Discrimination (Post-hoc, sklearn)
 
 | Metric | Value |
 |--------|-------|
-| PR-AUC | 0.9614 |
-| ROC-AUC | 0.9728 |
+| PR-AUC | 0.9991 |
+| ROC-AUC | 0.9995 |
 
 ## Figures
 - `results/figures/baselines/resnet50_bce/training_curves.png`

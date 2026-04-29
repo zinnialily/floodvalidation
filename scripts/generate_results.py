@@ -9,9 +9,11 @@ Usage:
 import argparse
 import os
 import pathlib
+import sys
 import warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
 import pandas as pd
@@ -27,25 +29,29 @@ from sklearn.metrics import (
     roc_curve, auc, classification_report,
 )
 from PIL import Image
+from utils import PREPROCESS_FN
 
-VAL_DIR   = "data/FloodingDataset2/processed_data/binary/val"
 IMG_SIZE  = (224, 224)
 BATCH     = 32
 
 
 def parse_args():
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     p.add_argument("--arch", required=True, choices=["efficientnet", "resnet50"])
     p.add_argument("--ckpt",       default=None, help="Override checkpoint path")
     p.add_argument("--log_csv",    default=None, help="Override log CSV path")
     p.add_argument("--results_dir",default="./results")
     p.add_argument("--loss_label", default="bce", choices=["bce", "focal"])
     p.add_argument("--seed",       default=42, type=int)
+    p.add_argument("--val_dir",
+                   default="data/FloodingDataset2/processed_data/binary/val",
+                   help="Path to the validation split directory (binary/val/).")
     p.add_argument("--subdir",     default="baselines",
-                   help="Subfolder under results/figures/ and results/tables/ (default: baselines). "
+                   help="Subfolder under results/figures/ and results/tables/. "
                         "Use 'hnm' for HNM models.")
     p.add_argument("--condition",  default="",
-                   help="Optional suffix to distinguish runs with same arch+loss (e.g. 'no_injection', 'random_injection').")
+                   help="Optional suffix to distinguish runs with same arch+loss "
+                        "(e.g. 'no_injection', 'random_injection').")
     return p.parse_args()
 
 
@@ -72,8 +78,10 @@ def resolve_paths(args):
     return ckpt, log_csv, fig_dir, table_dir, tag
 
 
-def run_inference(model, val_dir):
-    gen = ImageDataGenerator().flow_from_directory(
+def run_inference(model, val_dir: str, arch: str):
+    gen = ImageDataGenerator(
+        preprocessing_function=PREPROCESS_FN[arch],
+    ).flow_from_directory(
         val_dir, target_size=IMG_SIZE, batch_size=BATCH,
         class_mode='binary', shuffle=False,
     )
@@ -180,7 +188,7 @@ def plot_pr_roc(y_true_flood, flood_prob, TP, FP, FN, TN, fig_dir, arch):
     return pr_auc, roc_auc
 
 
-def plot_fp_fn_examples(y_true, y_pred, y_prob, filenames, fig_dir, arch, n=8):
+def plot_fp_fn_examples(y_true, y_pred, y_prob, filenames, fig_dir, arch, val_dir: str, n=8):
     def load_img(path):
         return np.array(Image.open(path).convert('RGB').resize((112, 112)))
 
@@ -195,7 +203,7 @@ def plot_fp_fn_examples(y_true, y_pred, y_prob, filenames, fig_dir, arch, n=8):
     precision = TP / (TP + FP) if (TP + FP) > 0 else 0
     recall    = TP / (TP + FN) if (TP + FN) > 0 else 0
 
-    val_root = pathlib.Path(VAL_DIR)
+    val_root = pathlib.Path(val_dir)
     fig = plt.figure(figsize=(16, 9))
     fig.suptitle(
         f'{arch.upper()} Baseline — Val Set Worst Errors\n'
@@ -309,7 +317,8 @@ def main():
     print("Loading model...")
     model = tf.keras.models.load_model(str(ckpt))
 
-    y_prob, y_true, filenames, class_indices = run_inference(model, VAL_DIR)
+    val_dir = os.path.abspath(args.val_dir)
+    y_prob, y_true, filenames, class_indices = run_inference(model, val_dir, args.arch)
     y_pred = (y_prob >= 0.5).astype(int)
 
     df = pd.read_csv(log_csv)
@@ -322,7 +331,7 @@ def main():
     plot_training_curves(df, fig_dir, args.arch, tag)
     TP, FP, FN, TN = plot_confusion_matrix(cm, len(y_true), len(df), fig_dir, args.arch)
     pr_auc, roc_auc = plot_pr_roc(y_true == 0, flood_prob, TP, FP, FN, TN, fig_dir, args.arch)
-    plot_fp_fn_examples(y_true, y_pred, y_prob, filenames, fig_dir, args.arch)
+    plot_fp_fn_examples(y_true, y_pred, y_prob, filenames, fig_dir, args.arch, val_dir)
     write_summary_table(df, report, cm, table_dir, args.arch, tag, args.seed,
                         pr_auc=pr_auc, roc_auc=roc_auc)
     print(f"\nPR-AUC={pr_auc:.4f}  ROC-AUC={roc_auc:.4f}")

@@ -9,12 +9,16 @@ Single source of truth for:
   - Training callbacks factory
 """
 
+import argparse
 import os
 import random
-from typing import List, Tuple
+import subprocess
+import sys
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
+from sklearn.utils.class_weight import compute_class_weight
 from tensorflow.keras.applications import EfficientNetB0, ResNet50
 from tensorflow.keras.callbacks import (
     CSVLogger,
@@ -28,7 +32,9 @@ from tensorflow.keras.layers import (
     Dropout,
     GlobalAveragePooling2D,
 )
+from tensorflow.keras.losses import BinaryFocalCrossentropy
 from tensorflow.keras.models import Model
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +250,7 @@ def build_model(
     freeze_for_phase1(base_model, n_trainable=phase_boundary[0])
 
     # Build the classification head.
-    x = base_model(inputs, training=True)
+    x = base_model(inputs)
     x = GlobalAveragePooling2D(name="gap")(x)
     x = Dropout(0.2, name="dropout_1")(x)
     x = Dense(256, activation="relu", name="dense_256")(x)
@@ -309,3 +315,286 @@ def build_callbacks(
     csv_logger = CSVLogger(filename=log_path)
 
     return [checkpoint, early_stopping, reduce_lr, csv_logger]
+
+
+# ---------------------------------------------------------------------------
+# Shared training constants
+# ---------------------------------------------------------------------------
+
+BATCH_SIZE: int = 32
+IMG_SIZE: Tuple[int, int] = (224, 224)
+
+
+# ---------------------------------------------------------------------------
+# Phase boundary parsing
+# ---------------------------------------------------------------------------
+
+
+def parse_phase_boundary(value: str) -> Tuple[int, int]:
+    """Parse a 'n_trainable,n_frozen' string into a tuple of ints.
+
+    Args:
+        value: Comma-separated string with exactly two positive integers,
+            e.g. ``"30,50"``.
+
+    Returns:
+        Tuple ``(n_trainable, n_frozen)``.
+
+    Raises:
+        argparse.ArgumentTypeError: If the string cannot be parsed or values
+            are not positive integers.
+    """
+    parts = value.split(",")
+    if len(parts) != 2:
+        raise argparse.ArgumentTypeError(
+            f"--phase_boundary must be 'n_trainable,n_frozen', got '{value}'"
+        )
+    try:
+        n_trainable, n_frozen = int(parts[0].strip()), int(parts[1].strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"Both values in --phase_boundary must be integers, got '{value}'"
+        ) from exc
+    if n_trainable <= 0 or n_frozen <= 0:
+        raise argparse.ArgumentTypeError(
+            f"Both phase_boundary values must be > 0, got {n_trainable}, {n_frozen}"
+        )
+    return n_trainable, n_frozen
+
+
+# ---------------------------------------------------------------------------
+# Loss function factory
+# ---------------------------------------------------------------------------
+
+
+def get_loss(args: argparse.Namespace):
+    """Return the Keras loss function specified by CLI args.
+
+    Args:
+        args: Parsed argument namespace with ``loss`` and ``focal_gamma``
+            attributes.
+
+    Returns:
+        ``"binary_crossentropy"`` string or a
+        ``BinaryFocalCrossentropy`` instance.
+    """
+    if args.loss == "focal":
+        return BinaryFocalCrossentropy(gamma=args.focal_gamma, from_logits=False)
+    return "binary_crossentropy"
+
+
+# ---------------------------------------------------------------------------
+# Runtime environment
+# ---------------------------------------------------------------------------
+
+
+def print_runtime_env() -> None:
+    """Print GPU info, TensorFlow version, and Python version."""
+    print("=" * 60)
+    print("Runtime environment")
+    print("=" * 60)
+    try:
+        result = subprocess.run(
+            ["nvidia-smi"], capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print(result.stdout[:600])
+        else:
+            print("nvidia-smi not available (CPU-only runtime or no driver).")
+    except FileNotFoundError:
+        print("nvidia-smi not found (macOS Metal or CPU-only runtime).")
+    print(f"TensorFlow version : {tf.__version__}")
+    print(f"Python version     : {sys.version}")
+    print("=" * 60)
+
+
+# ---------------------------------------------------------------------------
+# Data generators
+# ---------------------------------------------------------------------------
+
+
+def build_generators(
+    train_dir: str,
+    val_dir: str,
+    arch: str,
+    seed: int,
+) -> Tuple:
+    """Create training and validation ImageDataGenerators.
+
+    Training generator applies augmentation (rotation, shifts, flip, zoom,
+    brightness).  Validation generator applies only the backbone preprocessing
+    function.  Neither generator uses ``rescale`` — all normalisation is handled
+    by ``PREPROCESS_FN[arch]`` to avoid the double-rescaling bug.
+
+    Args:
+        train_dir: Path to the train split root (contains flood/ and non_flood/).
+        val_dir: Path to the val split root.
+        arch: Architecture key used to select the preprocessing function.
+        seed: Random seed for shuffling and augmentation.
+
+    Returns:
+        Tuple ``(train_gen, val_gen)`` of DirectoryIterators.
+    """
+    preprocess_fn = PREPROCESS_FN[arch]
+
+    train_datagen = ImageDataGenerator(
+        preprocessing_function=preprocess_fn,
+        rotation_range=15,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True,
+        zoom_range=0.2,
+        brightness_range=[0.8, 1.2],
+        fill_mode="reflect",
+        # NOTE: no rescale -- preprocessing_function handles normalisation.
+    )
+
+    val_datagen = ImageDataGenerator(
+        preprocessing_function=preprocess_fn,
+        # No augmentation, no rescale.
+    )
+
+    train_gen = train_datagen.flow_from_directory(
+        train_dir,
+        target_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        class_mode="binary",
+        shuffle=True,
+        seed=seed,
+    )
+
+    val_gen = val_datagen.flow_from_directory(
+        val_dir,
+        target_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        class_mode="binary",
+        shuffle=False,
+        seed=seed,
+    )
+
+    return train_gen, val_gen
+
+
+# ---------------------------------------------------------------------------
+# Class weight computation
+# ---------------------------------------------------------------------------
+
+
+def compute_class_weights(train_gen) -> Dict[int, float]:
+    """Compute balanced class weights from the training generator's label array.
+
+    Args:
+        train_gen: A DirectoryIterator with a populated ``classes`` attribute.
+
+    Returns:
+        Dictionary mapping class index to weight, e.g. ``{0: 1.2, 1: 0.85}``.
+    """
+    classes_array = train_gen.classes
+    unique_classes = np.unique(classes_array)
+    weights = compute_class_weight(
+        class_weight="balanced",
+        classes=unique_classes,
+        y=classes_array,
+    )
+    class_weight_dict = dict(zip(unique_classes.tolist(), weights.tolist()))
+    print(f"Class weights: {class_weight_dict}")
+    return class_weight_dict
+
+
+# ---------------------------------------------------------------------------
+# Metric helpers
+# ---------------------------------------------------------------------------
+
+
+def best_epoch_metrics(history, monitor: str = "val_loss") -> Dict:
+    """Extract metrics at the epoch with the best monitored value.
+
+    Args:
+        history: Keras History object returned by ``model.fit()``.
+        monitor: Metric name to minimise when selecting the best epoch.
+
+    Returns:
+        Dictionary of metric name -> value at the best epoch.
+    """
+    hist = history.history
+    best_epoch = int(np.argmin(hist[monitor]))
+    return {k: hist[k][best_epoch] for k in hist}
+
+
+# ---------------------------------------------------------------------------
+# Statistical utilities
+# ---------------------------------------------------------------------------
+
+
+def clopper_pearson_ci(
+    k: int, n: int, alpha: float = 0.05
+) -> Tuple[float, float]:
+    """Clopper-Pearson exact binomial confidence interval.
+
+    Args:
+        k: Number of successes (e.g. observed false positives).
+        n: Number of trials (e.g. total images in category).
+        alpha: Significance level (default 0.05 for 95% CI).
+
+    Returns:
+        Tuple ``(lower, upper)`` bounds on the true rate.
+    """
+    from scipy.stats import beta as beta_dist
+
+    lo = beta_dist.ppf(alpha / 2, k, n - k + 1) if k > 0 else 0.0
+    hi = beta_dist.ppf(1 - alpha / 2, k + 1, n - k) if k < n else 1.0
+    return float(lo), float(hi)
+
+
+def mcnemar_test(
+    correct_a: np.ndarray,
+    correct_b: np.ndarray,
+    alpha: float = 0.05,
+    n_comparisons: int = 1,
+) -> Dict[str, float]:
+    """McNemar's test with continuity correction and optional Bonferroni adjustment.
+
+    Attempts to use statsmodels; falls back to a manual scipy implementation
+    if statsmodels is not installed.
+
+    Args:
+        correct_a: Boolean array — True where model A was correct.
+        correct_b: Boolean array — True where model B was correct.
+        alpha: Nominal significance level before Bonferroni correction.
+        n_comparisons: Number of pairwise comparisons for Bonferroni.
+
+    Returns:
+        Dict with keys: ``b``, ``c``, ``chi2``, ``p_value``,
+        ``adjusted_alpha``, ``significant``.
+    """
+    b = int(np.sum(correct_a & ~correct_b))
+    c = int(np.sum(~correct_a & correct_b))
+
+    try:
+        from statsmodels.stats.contingency_tables import mcnemar as _mcnemar
+
+        table = np.array(
+            [
+                [int(np.sum(correct_a & correct_b)), b],
+                [c, int(np.sum(~correct_a & ~correct_b))],
+            ]
+        )
+        result = _mcnemar(table, exact=False, correction=True)
+        chi2 = float(result.statistic)
+        p_value = float(result.pvalue)
+    except ImportError:
+        from scipy.stats import chi2 as chi2_dist
+
+        n = b + c
+        chi2 = float((abs(b - c) - 1) ** 2 / n) if n > 0 else 0.0
+        p_value = float(chi2_dist.sf(chi2, df=1))
+
+    adjusted_alpha = alpha / n_comparisons
+    return {
+        "b": b,
+        "c": c,
+        "chi2": chi2,
+        "p_value": p_value,
+        "adjusted_alpha": adjusted_alpha,
+        "significant": p_value < adjusted_alpha,
+    }

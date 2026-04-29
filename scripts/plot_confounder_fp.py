@@ -4,54 +4,79 @@ Clopper-Pearson 95% confidence intervals across baseline and HNM conditions.
 
 Usage:
     python scripts/plot_confounder_fp.py
+    python scripts/plot_confounder_fp.py --results_dir ./results --threshold 0.05
 
 Output:
-    results/figures/confounder_fp_comparison.pdf
-    results/figures/confounder_fp_comparison.png
+    <results_dir>/figures/confounder_fp_comparison.pdf
+    <results_dir>/figures/confounder_fp_comparison.png
+    <results_dir>/figures/confounder_fp_heatmap.pdf
+    <results_dir>/figures/confounder_fp_heatmap.png
 """
 
+import argparse
+import os
+import sys
 import pathlib
 import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from scipy.stats import beta as beta_dist
 
-# ── Configuration ──────────────────────────────────────────────────────────────
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils import clopper_pearson_ci  # noqa: E402
 
-CONDITIONS = {
-    "EffNet BCE Baseline":    "results/tables/confounders/confounder_fp_rates_efficientnet_VAL.csv",
-    "EffNet BCE HNM":         "results/confounder_analysis/hnm_efficientnet_bce/tables/confounder_fp_rates_efficientnet_VAL.csv",
-    "Ext. Training":          "results/confounder_analysis/extended_baseline/tables/confounder_fp_rates_efficientnet_VAL.csv",
-    "Random Inject":          "results/confounder_analysis/random_inject/tables/confounder_fp_rates_efficientnet_VAL.csv",
-    "ResNet BCE Baseline":    "results/tables/confounders/confounder_fp_rates_resnet50_VAL.csv",
-    "ResNet BCE HNM":         "results/confounder_analysis/hnm_resnet50_bce/tables/confounder_fp_rates_resnet50_VAL.csv",
-}
 
-WATER_CATS = {"river", "swimming_pool", "park_walkway"}
+# ── Argument parsing ──────────────────────────────────────────────────────────
 
-OUTPUT_DIR = pathlib.Path("results/figures")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Plot per-category confounder FP rates with Clopper-Pearson CIs.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    p.add_argument(
+        "--results_dir",
+        default="./results",
+        help="Root results directory. CSV files are read from "
+             "<results_dir>/tables/confounders/ and "
+             "<results_dir>/confounder_analysis/*/tables/.",
+    )
+    p.add_argument(
+        "--threshold",
+        default=0.05,
+        type=float,
+        help="HNM flagging threshold θ shown as a dashed line on the bar chart.",
+    )
+    return p.parse_args()
 
-HNM_THRESHOLD = 0.05  # the flagging threshold θ
 
-# ── Clopper-Pearson CI ────────────────────────────────────────────────────────
+# ── Build conditions dict from results_dir ────────────────────────────────────
 
-def cp_ci(k: int, n: int, alpha: float = 0.05):
-    """Return (lower, upper) Clopper-Pearson 95% CI for k/n."""
-    if n == 0:
-        return (0.0, 1.0)
-    lo = beta_dist.ppf(alpha / 2,     k,     n - k + 1) if k > 0 else 0.0
-    hi = beta_dist.ppf(1 - alpha / 2, k + 1, n - k)
-    return (lo, hi)
+def build_conditions(results_dir: str) -> dict:
+    """Return an ordered dict mapping label -> CSV path for each condition.
+
+    All paths are relative to results_dir so the script works regardless of
+    where the repository is cloned.
+    """
+    rd = pathlib.Path(results_dir)
+    conf = rd / "tables" / "confounders"
+    ablation = rd / "confounder_analysis"
+    return {
+        "EffNet BCE":           str(conf / "confounder_fp_rates_efficientnet_VAL.csv"),
+        "ResNet BCE":           str(conf / "confounder_fp_rates_resnet50_VAL.csv"),
+        "EffNet Ext. Training": str(ablation / "extended_baseline" / "tables" /
+                                    "confounder_fp_rates_efficientnet_VAL.csv"),
+        "EffNet Rand. Inject":  str(ablation / "random_inject" / "tables" /
+                                    "confounder_fp_rates_efficientnet_VAL.csv"),
+        "EffNet P1-HNM \u2605": str(conf / "confounder_fp_rates_efficientnet_p1hnm_VAL.csv"),
+    }
 
 
 # ── Load all conditions ───────────────────────────────────────────────────────
 
-def load_all():
+def load_all(conditions: dict) -> dict:
     frames = {}
-    for label, path in CONDITIONS.items():
+    for label, path in conditions.items():
         p = pathlib.Path(path)
         if not p.exists():
             print(f"  [WARN] missing: {p}")
@@ -67,7 +92,7 @@ def load_all():
 
 # ── Build river-only summary ──────────────────────────────────────────────────
 
-def build_river_summary(frames):
+def build_river_summary(frames: dict) -> pd.DataFrame:
     rows = []
     for label, df in frames.items():
         if "river" not in df.index:
@@ -75,7 +100,7 @@ def build_river_summary(frames):
         row = df.loc["river"]
         n   = int(row["n_images"])
         k   = int(row["n_fp"])
-        lo, hi = cp_ci(k, n)
+        lo, hi = clopper_pearson_ci(k, n)
         rows.append({
             "condition": label,
             "n":         n,
@@ -89,17 +114,16 @@ def build_river_summary(frames):
 
 # ── Plot ──────────────────────────────────────────────────────────────────────
 
-def plot_river_fp(summary: pd.DataFrame):
+def plot_river_fp(summary: pd.DataFrame, output_dir: pathlib.Path, hnm_threshold: float) -> None:
     n_cond = len(summary)
     fig, ax = plt.subplots(figsize=(10, 5))
 
     colors = [
-        "#3498db",   # EffNet BCE Baseline
-        "#e74c3c",   # EffNet BCE HNM
-        "#f39c12",   # Ext. Training
-        "#9b59b6",   # Random Inject
-        "#2ecc71",   # ResNet BCE Baseline
-        "#1abc9c",   # ResNet BCE HNM
+        "#3498db",   # EffNet BCE
+        "#95a5a6",   # ResNet BCE
+        "#f39c12",   # EffNet Ext. Training
+        "#9b59b6",   # EffNet Rand. Inject
+        "#e74c3c",   # EffNet P1-HNM
     ][:n_cond]
 
     x = np.arange(n_cond)
@@ -130,11 +154,11 @@ def plot_river_fp(summary: pd.DataFrame):
 
     # HNM flagging threshold line
     ax.axhline(
-        y=HNM_THRESHOLD * 100,
+        y=hnm_threshold * 100,
         color="crimson",
         linestyle="--",
         linewidth=1.8,
-        label=r"HNM flagging threshold $\theta = 5\%$",
+        label=r"HNM flagging threshold $\theta = " + f"{hnm_threshold:.0%}" + r"$",
         zorder=2,
     )
 
@@ -159,14 +183,14 @@ def plot_river_fp(summary: pd.DataFrame):
         fontsize=12, fontweight="bold",
     )
     ax.legend(fontsize=10)
-    ax.set_ylim(0, max(summary["ci_hi"].max() * 100 + 5, HNM_THRESHOLD * 100 + 8))
+    ax.set_ylim(0, max(summary["ci_hi"].max() * 100 + 5, hnm_threshold * 100 + 8))
     ax.yaxis.grid(True, alpha=0.4, zorder=0)
     ax.set_axisbelow(True)
 
     plt.tight_layout()
 
     for ext in ("pdf", "png"):
-        out = OUTPUT_DIR / f"confounder_fp_comparison.{ext}"
+        out = output_dir / f"confounder_fp_comparison.{ext}"
         dpi = 300 if ext == "png" else None
         plt.savefig(out, dpi=dpi, bbox_inches="tight")
         print(f"Saved: {out}")
@@ -176,11 +200,11 @@ def plot_river_fp(summary: pd.DataFrame):
 
 # ── All-category heatmap (supplementary) ─────────────────────────────────────
 
-def plot_all_categories(frames):
+def plot_all_categories(frames: dict, output_dir: pathlib.Path) -> None:
     """Generate a heatmap of FP rates for all categories × all conditions."""
     categories = [
-        "river", "plant", "swimming_pool", "park_walkway",
-        "animal", "building", "street_clear", "vehicle",
+        "river", "swimming_pool", "lake", "fountain",
+        "building", "park_walkway", "street_clear",
     ]
     labels = list(frames.keys())
     matrix = np.full((len(categories), len(labels)), np.nan)
@@ -213,13 +237,14 @@ def plot_all_categories(frames):
                         color="white" if val > 10 else "black")
 
     ax.set_title(
-        "Per-Category FP Rate (%) — All Conditions\n(Val set, seed 42, τ = 0.5)",
+        "Per-Category False Positive Rate (%) by Training Condition\n"
+        "(Val set, N=497, seed 42, decision threshold τ = 0.5)",
         fontsize=11, fontweight="bold",
     )
     plt.tight_layout()
 
     for ext in ("pdf", "png"):
-        out = OUTPUT_DIR / f"confounder_fp_heatmap.{ext}"
+        out = output_dir / f"confounder_fp_heatmap.{ext}"
         dpi = 300 if ext == "png" else None
         plt.savefig(out, dpi=dpi, bbox_inches="tight")
         print(f"Saved: {out}")
@@ -229,9 +254,16 @@ def plot_all_categories(frames):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main():
+def main() -> None:
+    args = parse_args()
+
+    output_dir = pathlib.Path(args.results_dir) / "figures"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    conditions = build_conditions(args.results_dir)
+
     print("Loading confounder FP rate CSVs...")
-    frames = load_all()
+    frames = load_all(conditions)
     print(f"Loaded {len(frames)} conditions: {list(frames.keys())}")
 
     summary = build_river_summary(frames)
@@ -239,10 +271,10 @@ def main():
     print(summary.to_string(index=False))
 
     print("\nGenerating Figure 5: river FP bar chart...")
-    plot_river_fp(summary)
+    plot_river_fp(summary, output_dir, args.threshold)
 
     print("\nGenerating supplementary all-category heatmap...")
-    plot_all_categories(frames)
+    plot_all_categories(frames, output_dir)
 
     print("\nDone.")
 

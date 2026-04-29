@@ -23,6 +23,9 @@ Notes:
     - PR-AUC, Recall, F1, and pool FP rate are reported as mean ± std across seeds.
 """
 
+# NOTE: Not used for reported results (paper reports single seed = 42).
+# Designed for future multi-seed extension.
+
 from __future__ import annotations
 
 import argparse
@@ -34,7 +37,9 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils import mcnemar_test as _mcnemar_canonical  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Metrics computed per seed CSV
@@ -169,6 +174,9 @@ def aggregate_metrics(
 def mcnemar_test(correct_a: np.ndarray, correct_b: np.ndarray) -> float:
     """McNemar's test with continuity correction.
 
+    Thin wrapper around utils.mcnemar_test that returns just the p-value
+    for use in the pairwise sweep loop below.
+
     Args:
         correct_a: Boolean array of per-image correctness for model A.
         correct_b: Boolean array of per-image correctness for model B.
@@ -176,13 +184,9 @@ def mcnemar_test(correct_a: np.ndarray, correct_b: np.ndarray) -> float:
     Returns:
         p-value (two-sided).
     """
-    b = int(np.sum(correct_a & ~correct_b))
-    c = int(np.sum(~correct_a & correct_b))
-    n = b + c
-    if n == 0:
+    if int(np.sum(correct_a & ~correct_b)) + int(np.sum(~correct_a & correct_b)) == 0:
         return 1.0
-    statistic = (abs(b - c) - 1.0) ** 2 / n
-    return float(1.0 - chi2.cdf(statistic, df=1))
+    return _mcnemar_canonical(correct_a, correct_b)["p_value"]
 
 
 def run_mcnemar_pairs(
