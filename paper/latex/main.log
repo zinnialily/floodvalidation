@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.22)  29 APR 2026 13:11
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.22)  1 MAY 2026 10:18
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1217,121 +1217,121 @@ Package caption Info: End \AtBeginDocument code.
 \openout5 = `main.abs'.
 
 LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 1
-52.
+51.
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 1
-52.
+51.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
-152.
+151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
-152.
+151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 152.
+(Font)              <12> on input line 151.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 152.
+(Font)              <8> on input line 151.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 152.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 152
+(Font)              <6> on input line 151.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 151
 .
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 152
+LaTeX Font Info:    Trying to load font information for U+msb on input line 151
 .
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Trying to load font information for LS1+stixfrak on input l
-ine 152.
+ine 151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/stix/ls1stixfrak.fd
 File: ls1stixfrak.fd 2015/04/17 v1.1.2-latex STIX fraktur LS1 font definitions
 )
 LaTeX Font Info:    Trying to load font information for LS1+stixbb on input lin
-e 152.
+e 151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/stix/ls1stixbb.fd
 File: ls1stixbb.fd 2015/04/17 v1.1.2-latex STIX blackboard LS1 font definitions
 
 )
 LaTeX Font Info:    Trying to load font information for LS2+stixcal on input li
-ne 152.
+ne 151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/stix/ls2stixcal.fd
 File: ls2stixcal.fd 2015/04/17 v1.1.2-latex STIX calligraphic LS2 font definiti
 ons
 )
 LaTeX Font Info:    Trying to load font information for LS1+stixsf on input lin
-e 152.
+e 151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/stix/ls1stixsf.fd
 File: ls1stixsf.fd 2015/04/17 v1.1.2-latex STIX sans-serif LS1 font definitions
 
 )
 LaTeX Font Info:    Trying to load font information for LS2+stixtt on input lin
-e 152.
+e 151.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/stix/ls2stixtt.fd
 File: ls2stixtt.fd 2015/04/17 v1.1.2-latex STIX typewriter LS2 font definitions
 
 )
-Underfull \hbox (badness 10000) in paragraph at lines 153--155
+Underfull \hbox (badness 10000) in paragraph at lines 152--154
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 156--158
+Underfull \hbox (badness 10000) in paragraph at lines 155--157
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 159--161
+Underfull \hbox (badness 10000) in paragraph at lines 158--160
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 162--164
+Underfull \hbox (badness 10000) in paragraph at lines 161--163
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 165--167
+Underfull \hbox (badness 10000) in paragraph at lines 164--166
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 168--170
+Underfull \hbox (badness 10000) in paragraph at lines 167--169
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 173--175
+Underfull \hbox (badness 10000) in paragraph at lines 172--174
 
  []
 
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 2
-00.
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1
+99.
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for T1+lmss on input line 2
-11.
+10.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/t1lmss.fd
 File: t1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
@@ -1343,509 +1343,435 @@ pdfTeX warning (ext4): destination with the same identifier (name{page.0}) has
 been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.211 \maketitle
+l.210 \maketitle
                  [0{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ts
 1.enc}]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <17.28> on input line 211.
+(Font)              <17.28> on input line 210.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 211.
+(Font)              <10> on input line 210.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 211.
+(Font)              <5> on input line 210.
 
-Overfull \hbox (117.0831pt too wide) detected at line 211
+Overfull \hbox (117.0831pt too wide) detected at line 210
 []
  []
 
 (./main.abs)
-Overfull \hbox (2.59395pt too wide) in paragraph at lines 211--211
+Overfull \hbox (2.59395pt too wide) in paragraph at lines 210--210
  \T1/lmr/m/n/8 We in-tro-duce Phase-1 Hard Neg-a-tive Min-ing (Phase-1 HNM), a 
 confounder-targeted
  []
 
 LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 2
-11.
+10.
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [1{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{/usr/loca
 l/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7.5> on input line 264.
+(Font)              <7.5> on input line 261.
  [2] [3] [4]
 LaTeX Font Info:    Trying to load font information for TS1+lmss on input line 
-415.
+410.
 
 (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/ts1lmss.fd
 File: ts1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <9> on input line 415.
+(Font)              <9> on input line 410.
 LaTeX Font Info:    Font shape `T1/lmss/m/it' in size <9> not available
-(Font)              Font shape `T1/lmss/m/sl' tried instead on input line 426.
+(Font)              Font shape `T1/lmss/m/sl' tried instead on input line 421.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 475.
+(Font)              <7> on input line 470.
 
 Missing character: There is no ‚ in font lmmi7!
 [5]
 LaTeX Font Info:    Freeze math alphabet allocation in version normal.
-(Font)              Allocated math groups: 14 (local: 2) on input line 514.
+(Font)              Allocated math groups: 14 (local: 2) on input line 509.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 515.
+rmal on input line 510.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 515.
+rmal on input line 510.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 515.
+rmal on input line 510.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 515.
+rmal on input line 510.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 515.
+rmal on input line 510.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 515.
+rmal on input line 510.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 511.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 511.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 512.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 512.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 512.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 512.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 512.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 512.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 513.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 513.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 513.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 513.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 513.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 513.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 514.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
 rmal on input line 516.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 516.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 517.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 517.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 517.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 517.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 517.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 517.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 518.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 518.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 518.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 518.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 518.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 518.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 519.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 521.
 LaTeX Font Info:    Undo math alphabet allocation in version normal on input li
-ne 521.
+ne 516.
 
 Missing character: There is no ‚ in font lmmi10!
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 522.
+ine 517.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 523.
+rmal on input line 518.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 523.
+ine 518.
 Missing character: There is no ‚ in font lmmi10!
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 523.
+ine 518.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 529.
+rmal on input line 524.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 529.
+ine 524.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 529.
+ine 524.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 529.
+ine 524.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 530.
+rmal on input line 525.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 530.
+ine 525.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 530.
+ine 525.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 530.
+ine 525.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 541.
+rmal on input line 535.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 541.
+rmal on input line 535.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 541.
-Missing character: There is no ‚ in font lmmi10!
-Missing character: There is no ‚ in font lmmi10!
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 543.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 543.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 545.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 546.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 546.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 546.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 546.
+rmal on input line 535.
 Missing character: There is no ‚ in font lmmi10!
 Missing character: There is no ‚ in font lmmi10!
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 548.
+rmal on input line 537.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 548.
-Missing character: There is no ‚ in font lmmi10!
+ine 537.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 549.
+ine 538.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 549.
-Missing character: There is no ‚ in font lmmi10!
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 549.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 549.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 549.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 550.
-[6{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}]
+ine 538.
 
 LaTeX Font Warning: Font shape `T1/lmr/b/it' in size <10.5> not available
-(Font)              Font shape `T1/lmr/b/sl' tried instead on input line 556.
+(Font)              Font shape `T1/lmr/b/sl' tried instead on input line 545.
 
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 558.
+ine 545.
+[6]
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 559.
+ine 547.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 559.
+ine 548.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 561.
+ine 548.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 561.
+ine 550.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 550.
+
 Missing character: There is no ‚ in font lmmi10!
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 567.
+ine 556.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 568.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 571.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 571.
+ine 557.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 571.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 575.
+ine 564.
 Missing character: There is no ý in font lmsy8!
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 575.
+ine 564.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 575.
+ine 564.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 576.
+ine 565.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 577.
+ine 566.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 590.
+ine 579.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 590.
+ine 579.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 598.
+rmal on input line 587.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 607.
+ine 596.
 
-Overfull \hbox (2.40215pt too wide) in paragraph at lines 593--608
+Overfull \hbox (2.40215pt too wide) in paragraph at lines 582--597
  [][] 
  []
 
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 610.
+ine 606.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 611.
+ine 607.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 609.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 612.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 614.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 617.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 618.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 619.
+ine 614.
 [7]
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 614.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 615.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 615.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 620.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 623.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 625.
+rmal on input line 615.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 625.
+ine 615.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 626.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 626.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 626.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 626.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 626.
-LaTeX Font Info:    Calculating math sizes for size <11> on input line 634.
+ine 615.
+LaTeX Font Info:    Calculating math sizes for size <11> on input line 623.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <11> on input line 634.
+(Font)              <11> on input line 623.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7.69997> on input line 634.
+(Font)              <7.69997> on input line 623.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5.5> on input line 634.
+(Font)              <5.5> on input line 623.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 634.
+ine 623.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 626.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 627.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 628.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 628.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 629.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 637.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 638.
+ine 637.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 639.
+ine 649.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 640.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 640.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 641.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 650.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 650.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 664.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 671.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 671.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 672.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 672.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 672.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 673.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 677.
- [8]
-<../../necessary_diagrams/03_eff_bce_pr_roc_curves.png, id=227, 858.5676pt x 35
-5.5684pt>
-File: ../../necessary_diagrams/03_eff_bce_pr_roc_curves.png Graphic file (type 
-png)
-<use ../../necessary_diagrams/03_eff_bce_pr_roc_curves.png>
-Package pdftex.def Info: ../../necessary_diagrams/03_eff_bce_pr_roc_curves.png 
- used on input line 682.
-(pdftex.def)             Requested size: 224.79755pt x 93.09666pt.
-<../../necessary_diagrams/04_res_bce_pr_roc_curves.png, id=229, 858.5676pt x 35
-5.5684pt>
-File: ../../necessary_diagrams/04_res_bce_pr_roc_curves.png Graphic file (type 
-png)
-<use ../../necessary_diagrams/04_res_bce_pr_roc_curves.png>
-Package pdftex.def Info: ../../necessary_diagrams/04_res_bce_pr_roc_curves.png 
- used on input line 688.
-(pdftex.def)             Requested size: 224.79755pt x 93.09666pt.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 696.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 696.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 696.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 704.
-<../../necessary_diagrams/14_eff_bce_fp_fn_examples.png, id=231, 808.86807pt x 
+ine 656.
+<../../necessary_diagrams/14_eff_bce_fp_fn_examples.png, id=203, 808.86807pt x 
 529.23877pt>
 File: ../../necessary_diagrams/14_eff_bce_fp_fn_examples.png Graphic file (type
  png)
 <use ../../necessary_diagrams/14_eff_bce_fp_fn_examples.png>
 Package pdftex.def Info: ../../necessary_diagrams/14_eff_bce_fp_fn_examples.png
-  used on input line 713.
+  used on input line 665.
 (pdftex.def)             Requested size: 224.79755pt x 147.0795pt.
-<../../necessary_diagrams/15_res_bce_fp_fn_examples.png, id=232, 922.8323pt x 5
+<../../necessary_diagrams/15_res_bce_fp_fn_examples.png, id=205, 922.8323pt x 5
 29.23877pt>
 File: ../../necessary_diagrams/15_res_bce_fp_fn_examples.png Graphic file (type
  png)
 <use ../../necessary_diagrams/15_res_bce_fp_fn_examples.png>
 Package pdftex.def Info: ../../necessary_diagrams/15_res_bce_fp_fn_examples.png
-  used on input line 719.
+  used on input line 671.
 (pdftex.def)             Requested size: 224.79755pt x 128.91765pt.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 727.
+ine 679.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 727.
+ine 679.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 689.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 690.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 700.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 700.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 708.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 708.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 721.
+<../../necessary_diagrams/06_confounder_fp_heatmap.pdf, id=208, 559.9383pt x 42
+5.26233pt>
+File: ../../necessary_diagrams/06_confounder_fp_heatmap.pdf Graphic file (type 
+pdf)
+<use ../../necessary_diagrams/06_confounder_fp_heatmap.pdf>
+Package pdftex.def Info: ../../necessary_diagrams/06_confounder_fp_heatmap.pdf 
+ used on input line 726.
+(pdftex.def)             Requested size: 468.3324pt x 355.70598pt.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 731.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 731.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 735.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 737.
+ [8]
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 738.
+ine 737.
+ [9 <../../necessary_diagrams/14_eff_bce_fp_fn_examples.png> <../../necessary_d
+iagrams/15_res_bce_fp_fn_examples.png> <../../necessary_diagrams/06_confounder_
+fp_heatmap.pdf>]
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 740.
- [9 <../../necessary_diagrams/03_eff_bce_pr_roc_curves.png> <../../necessary_di
-agrams/04_res_bce_pr_roc_curves.png> <../../necessary_diagrams/14_eff_bce_fp_fn
-_examples.png> <../../necessary_diagrams/15_res_bce_fp_fn_examples.png>]
+ine 743.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 748.
+ine 743.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 748.
+ine 744.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 744.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 746.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 747.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 749.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 756.
+rmal on input line 749.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 749.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 750.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 761.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 761.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 761.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 761.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 756.
+rmal on input line 767.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 769.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 772.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 780.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 780.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 780.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 780.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 781.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 781.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 781.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 783.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 784.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 786.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 786.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 786.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 787.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 798.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 798.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 798.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 798.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 804.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 815.
+ine 778.
+<../../necessary_diagrams/03_eff_bce_pr_roc_curves.png, id=337, 858.5676pt x 35
+5.5684pt>
 File: ../../necessary_diagrams/03_eff_bce_pr_roc_curves.png Graphic file (type 
 png)
 <use ../../necessary_diagrams/03_eff_bce_pr_roc_curves.png>
 Package pdftex.def Info: ../../necessary_diagrams/03_eff_bce_pr_roc_curves.png 
- used on input line 822.
+ used on input line 785.
 (pdftex.def)             Requested size: 224.79755pt x 93.09666pt.
-<../../necessary_diagrams/16_ablation_extended_pr_roc.png, id=250, 858.5676pt x
+<../../necessary_diagrams/16_ablation_extended_pr_roc.png, id=338, 858.5676pt x
  355.5684pt>
 File: ../../necessary_diagrams/16_ablation_extended_pr_roc.png Graphic file (ty
 pe png)
 <use ../../necessary_diagrams/16_ablation_extended_pr_roc.png>
 Package pdftex.def Info: ../../necessary_diagrams/16_ablation_extended_pr_roc.p
-ng  used on input line 828.
+ng  used on input line 791.
 (pdftex.def)             Requested size: 224.79755pt x 93.09666pt.
-<../../necessary_diagrams/17_ablation_random_inject_pr_roc.png, id=251, 858.567
+<../../necessary_diagrams/17_ablation_random_inject_pr_roc.png, id=339, 858.567
 6pt x 355.5684pt>
 File: ../../necessary_diagrams/17_ablation_random_inject_pr_roc.png Graphic fil
 e (type png)
 <use ../../necessary_diagrams/17_ablation_random_inject_pr_roc.png>
 Package pdftex.def Info: ../../necessary_diagrams/17_ablation_random_inject_pr_
-roc.png  used on input line 834.
+roc.png  used on input line 797.
 (pdftex.def)             Requested size: 224.79755pt x 93.09666pt.
-<../../necessary_diagrams/09_hnm_eff_bce_pr_roc_curves.png, id=252, 858.5676pt 
+<../../necessary_diagrams/09_hnm_eff_bce_pr_roc_curves.png, id=340, 858.5676pt 
 x 355.5684pt>
 File: ../../necessary_diagrams/09_hnm_eff_bce_pr_roc_curves.png Graphic file (t
 ype png)
 <use ../../necessary_diagrams/09_hnm_eff_bce_pr_roc_curves.png>
 Package pdftex.def Info: ../../necessary_diagrams/09_hnm_eff_bce_pr_roc_curves.
-png  used on input line 840.
+png  used on input line 803.
 (pdftex.def)             Requested size: 224.79755pt x 93.09666pt.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 848.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 848.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 848.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 848.
-<../../necessary_diagrams/07_confounder_fp_comparison.pdf, id=253, 714.16188pt 
+ine 810.
+<../../necessary_diagrams/07_confounder_fp_comparison.pdf, id=341, 714.16188pt 
 x 350.58296pt>
 File: ../../necessary_diagrams/07_confounder_fp_comparison.pdf Graphic file (ty
 pe pdf)
 <use ../../necessary_diagrams/07_confounder_fp_comparison.pdf>
 Package pdftex.def Info: ../../necessary_diagrams/07_confounder_fp_comparison.p
-df  used on input line 854.
+df  used on input line 816.
 (pdftex.def)             Requested size: 384.036pt x 188.52026pt.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 863.
+rmal on input line 825.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 825.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 825.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 825.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 845.
+ [10]
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 845.
+ [11 <../../necessary_diagrams/03_eff_bce_pr_roc_curves.png> <../../necessary_d
+iagrams/16_ablation_extended_pr_roc.png> <../../necessary_diagrams/17_ablation_
+random_inject_pr_roc.png> <../../necessary_diagrams/09_hnm_eff_bce_pr_roc_curve
+s.png> <../../necessary_diagrams/07_confounder_fp_comparison.pdf>]
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 859.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 860.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 862.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 862.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 863.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 863.
+ine 870.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 870.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 863.
+ine 870.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 870.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 870.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 881.
-[10]
+ [12]
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 881.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 885.
+ine 881.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 885.
+ine 882.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 890.
- [11 <../../necessary_diagrams/16_ablation_extended_pr_roc.png> <../../necessar
-y_diagrams/17_ablation_random_inject_pr_roc.png> <../../necessary_diagrams/09_h
-nm_eff_bce_pr_roc_curves.png>]
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 897.
+ine 883.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 897.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 898.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 902.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 903.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
 rmal on input line 905.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 905.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 906.
+ine 905.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 913.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 913.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 913.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 913.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 913.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 915.
- [12 <../../necessary_diagrams/07_confounder_fp_comparison.pdf>]
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 924.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 924.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 925.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 926.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 940.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 941.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 945.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 948.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 948.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 948.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 955.
+ine 918.
  [13]
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 964.
+ine 921.
  (./main.bbl
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 24.
@@ -1864,78 +1790,78 @@ ine 87.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 95.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 103.
+ine 102.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 110.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 118.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 121.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 131.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 141.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 150.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 157.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 160.
  [14]
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 129.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 139.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 149.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 158.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 165.
+ine 170.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
 ine 178.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 186.
+ine 187.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 195.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 205.
+ine 197.
 )
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 982.
+ine 939.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 989.
+rmal on input line 946.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 990.
+rmal on input line 947.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 997.
+rmal on input line 954.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1000.
+rmal on input line 957.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1001.
+rmal on input line 958.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1002.
+rmal on input line 961.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1006.
+rmal on input line 962.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1007.
+rmal on input line 964.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 965.
 
 Missing character: There is no ý in font lmsy6!
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1008.
+rmal on input line 966.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1008.
+rmal on input line 966.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1009.
+rmal on input line 967.
 LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1010.
+rmal on input line 968.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1014.
+ine 972.
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1029.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1029.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1029.
-LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
-rmal on input line 1034.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1047.
-LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1049.
+ine 979.
 [15]
 LaTeX Font Info:    No math alphabet change to frozen version normal on input l
-ine 1049.
+ine 987.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 987.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 987.
+LaTeX Font Info:    Nested math: keeping math alphabet allocation in version no
+rmal on input line 992.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 1005.
+LaTeX Font Info:    No math alphabet change to frozen version normal on input l
+ine 1007.
  [16] (./main.aux)
  ***********
 LaTeX2e <2025-11-01>
@@ -1945,10 +1871,10 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 32070 strings out of 467525
- 588033 string characters out of 5418982
+ 32054 strings out of 467525
+ 587752 string characters out of 5418982
  989550 words of memory out of 5000000
- 60295 multiletter control sequences out of 15000+600000
+ 60284 multiletter control sequences out of 15000+600000
  831985 words of font info for 238 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  90i,13n,98p,638b,948s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1957,33 +1883,33 @@ cal/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/local/texliv
 e/2026/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local/texlive/2026/tex
 mf-dist/fonts/type1/public/lm/lmbx8.pfb></usr/local/texlive/2026/texmf-dist/fon
 ts/type1/public/lm/lmcsc10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/
-public/lm/lmex10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/
-lmmi10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi12.pfb
-></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi7.pfb></usr/loca
-l/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi8.pfb></usr/local/texlive/2
-026/texmf-dist/fonts/type1/public/lm/lmmi9.pfb></usr/local/texlive/2026/texmf-d
-ist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/2026/texmf-dist/fonts/t
-ype1/public/lm/lmr12.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public
-/lm/lmr17.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr5.pf
-b></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr6.pfb></usr/loca
-l/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr7.pfb></usr/local/texlive/20
-26/texmf-dist/fonts/type1/public/lm/lmr8.pfb></usr/local/texlive/2026/texmf-dis
-t/fonts/type1/public/lm/lmr9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type
-1/public/lm/lmri10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/l
-m/lmri7.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmri8.pfb
-></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmri9.pfb></usr/loca
-l/texlive/2026/texmf-dist/fonts/type1/public/lm/lmss8.pfb></usr/local/texlive/2
-026/texmf-dist/fonts/type1/public/lm/lmss9.pfb></usr/local/texlive/2026/texmf-d
-ist/fonts/type1/public/lm/lmssbx10.pfb></usr/local/texlive/2026/texmf-dist/font
-s/type1/public/lm/lmsso9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/pu
-blic/lm/lmtt10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lm
-tt8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></u
-sr/local/texlive/2026/texmf-dist/fonts/type1/public/stix/stix-mathcal.pfb></usr
-/local/texlive/2026/texmf-dist/fonts/type1/public/stix/stix-mathsf.pfb>
-Output written on main.pdf (18 pages, 2964482 bytes).
+public/lm/lmmi10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/
+lmmi12.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi7.pfb>
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi8.pfb></usr/local
+/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi9.pfb></usr/local/texlive/20
+26/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/2026/texmf-di
+st/fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2026/texmf-dist/fonts/ty
+pe1/public/lm/lmr17.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/
+lm/lmr5.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr6.pfb>
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr7.pfb></usr/local/
+texlive/2026/texmf-dist/fonts/type1/public/lm/lmr8.pfb></usr/local/texlive/2026
+/texmf-dist/fonts/type1/public/lm/lmr9.pfb></usr/local/texlive/2026/texmf-dist/
+fonts/type1/public/lm/lmri10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type
+1/public/lm/lmri7.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm
+/lmri8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmri9.pfb>
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmss8.pfb></usr/local
+/texlive/2026/texmf-dist/fonts/type1/public/lm/lmss9.pfb></usr/local/texlive/20
+26/texmf-dist/fonts/type1/public/lm/lmssbx10.pfb></usr/local/texlive/2026/texmf
+-dist/fonts/type1/public/lm/lmsso9.pfb></usr/local/texlive/2026/texmf-dist/font
+s/type1/public/lm/lmtt10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/pu
+blic/lm/lmtt8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmt
+t9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/stix/stix-mathcal
+.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/stix/stix-mathsf.pf
+b>
+Output written on main.pdf (18 pages, 2911635 bytes).
 PDF statistics:
- 617 PDF objects out of 1000 (max. 8388607)
- 425 compressed objects within 5 object streams
- 104 named destinations out of 1000 (max. 500000)
+ 698 PDF objects out of 1000 (max. 8388607)
+ 418 compressed objects within 5 object streams
+ 100 named destinations out of 1000 (max. 500000)
  53 words of extra memory for PDF output out of 10000 (max. 10000000)
 

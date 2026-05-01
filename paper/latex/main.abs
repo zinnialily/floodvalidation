@@ -2,9 +2,8 @@ We introduce Phase-1 Hard Negative Mining (\PHNM{}), a confounder-targeted
 resampling pipeline for street-level flood detection that exploits a partially
 trained intermediate checkpoint to recover visual confounder candidates that a
 fully converged model cannot provide.
-Existing flood screening systems report aggregate accuracy or ROC-AUC, which
-conceal category-level false positive rates and overstate discrimination on
-class-imbalanced datasets.
+Existing flood screening systems report aggregate accuracy or ROC-AUC, neither of which
+surfaces category-level false positive rates critical for the recall-first screening objective.
 We fine-tune \EffNet{} and \ResNet{} with a two-phase progressive transfer
 learning protocol on 4,099 deduplicated street-level images spanning eight
 non-flood categories including four water confounders, mine difficulty-ranked

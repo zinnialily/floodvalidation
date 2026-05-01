@@ -4,44 +4,44 @@ The top-level auxiliary file: main.aux
 The style file: cas-model2-names.bst
 Database file #1: main.bib
 Reallocated singl_function (elt_size=4) to 100 items from 50.
-You've used 20 entries,
+You've used 19 entries,
             2990 wiz_defined-function locations,
-            892 strings with 11045 characters,
-and the built_in function-call counts, 15873 in all, are:
-= -- 1247
-> -- 720
-< -- 15
-+ -- 281
-- -- 255
-* -- 1789
-:= -- 2270
-add.period$ -- 71
-call.type$ -- 20
-change.case$ -- 186
-chr.to.int$ -- 20
-cite$ -- 20
-duplicate$ -- 1112
-empty$ -- 1052
-format.name$ -- 323
-if$ -- 2987
+            885 strings with 10861 characters,
+and the built_in function-call counts, 14905 in all, are:
+= -- 1165
+> -- 678
+< -- 14
++ -- 265
+- -- 240
+* -- 1687
+:= -- 2139
+add.period$ -- 68
+call.type$ -- 19
+change.case$ -- 176
+chr.to.int$ -- 19
+cite$ -- 19
+duplicate$ -- 1045
+empty$ -- 988
+format.name$ -- 305
+if$ -- 2793
 int.to.chr$ -- 1
 int.to.str$ -- 1
-missing$ -- 217
-newline$ -- 126
-num.names$ -- 80
-pop$ -- 370
+missing$ -- 205
+newline$ -- 121
+num.names$ -- 76
+pop$ -- 348
 preamble$ -- 1
-purify$ -- 165
+purify$ -- 156
 quote$ -- 0
-skip$ -- 385
+skip$ -- 353
 stack$ -- 0
-substring$ -- 674
-swap$ -- 878
-text.length$ -- 7
+substring$ -- 623
+swap$ -- 824
+text.length$ -- 6
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 180
+type$ -- 171
 warning$ -- 0
-while$ -- 97
+while$ -- 91
 width$ -- 0
-write$ -- 323
+write$ -- 308

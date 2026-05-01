@@ -1,4 +1,4 @@
-\begin{thebibliography}{20}
+\begin{thebibliography}{19}
 \expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\href}[2]{#2}
@@ -93,14 +93,6 @@
 \newblock \bibinfo{journal}{Electronics} \bibinfo{volume}{14},
   \bibinfo{pages}{2082}.
 \newblock \DOIprefix\doi{10.3390/electronics14102082}.
-%Type = Inproceedings
-\bibitem[{Lin et~al.(2017)Lin, Goyal, Girshick, He and Doll{\'a}r}]{Lin2017}
-\bibinfo{author}{Lin, T.Y.}, \bibinfo{author}{Goyal, P.},
-  \bibinfo{author}{Girshick, R.}, \bibinfo{author}{He, K.},
-  \bibinfo{author}{Doll{\'a}r, P.}, \bibinfo{year}{2017}.
-\newblock \bibinfo{title}{Focal loss for dense object detection}, in:
-  \bibinfo{booktitle}{Proc. ICCV 2017}, pp. \bibinfo{pages}{2980--2988}.
-\newblock \DOIprefix\doi{10.1109/ICCV.2017.324}.
 %Type = Inproceedings
 \bibitem[{Lyu et~al.(2025)Lyu, Lyu, Zhao and Gao}]{Lyu2025}
 \bibinfo{author}{Lyu, S.}, \bibinfo{author}{Lyu, R.}, \bibinfo{author}{Zhao,

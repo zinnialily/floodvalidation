@@ -127,9 +127,8 @@ We introduce Phase-1 Hard Negative Mining (\PHNM{}), a confounder-targeted
 resampling pipeline for street-level flood detection that exploits a partially
 trained intermediate checkpoint to recover visual confounder candidates that a
 fully converged model cannot provide.
-Existing flood screening systems report aggregate accuracy or ROC-AUC, which
-conceal category-level false positive rates and overstate discrimination on
-class-imbalanced datasets.
+Existing flood screening systems report aggregate accuracy or ROC-AUC, neither of which
+surfaces category-level false positive rates critical for the recall-first screening objective.
 We fine-tune \EffNet{} and \ResNet{} with a two-phase progressive transfer
 learning protocol on 4,099 deduplicated street-level images spanning eight
 non-flood categories including four water confounders, mine difficulty-ranked
@@ -200,7 +199,7 @@ Please confirm that your submission follows all the requirements of the guidelin
 \item Phase-1 Hard Negative Mining exploits an intermediate checkpoint to mine visual confounder candidates that a fully-converged model cannot provide.
 \item River images are the dominant false-positive confounder; per-category FP rates with Clopper-Pearson CIs quantify this precisely.
 \item P1-HNM simultaneously improves EfficientNetB0 flood recall from 97.8\,\% to 99.1\,\% and reduces river FP rate from 9.2\,\% to 5.3\,\%.
-\item PR-AUC combined with per-category FP analysis is the necessary metric pair for imbalanced flood screening; aggregate accuracy and ROC-AUC are insufficient.
+\item Recall-first evaluation using PR-AUC alongside per-category FP rates with Clopper-Pearson CIs reveals per-threshold operating-point differences invisible in aggregate accuracy.
 \item A controlled three-way ablation isolates difficulty-ranked selection as the source of improvement over extended training and random injection.
 \end{highlights}
 
@@ -254,13 +253,11 @@ immediate cost.
 This asymmetric cost structure makes flood recall---the fraction of actual flood images correctly identified---the primary operational metric.
 Performance depends strongly on the evaluation metric chosen, particularly given this recall-focused objective.
 Yet most published flood detection systems report ROC-AUC or overall accuracy,
-metrics that are known to overstate performance on imbalanced binary
-classification problems \cite{Davis2006}: specificity is easy to achieve when
-negatives substantially outnumber positives, inflating ROC-AUC even when recall
-is poor.
-Precision-recall AUC (\PR{}) is the more informative metric for this problem
-regime \cite{Davis2006,Saito2015}.
-We demonstrate this empirically in \cref{sec:results:metric}: despite comparable
+neither of which surfaces per-threshold operating-point differences between architectures
+nor per-category false positive rates on confounding categories.
+For a recall-first screening objective, \PR{} and per-category FP analysis are the
+appropriate diagnostic tools \cite{Davis2006,Saito2015}.
+We demonstrate this empirically in \cref{sec:results:baseline}: despite comparable
 overall accuracy ($\approx 98.5\,\%$) and PR-AUC values (0.9976 vs.\ 0.9991),
 the two architectures differ by 2 missed floods (9 vs.\ 7) at $\tau{=}0.5$---
 a per-threshold difference invisible in either aggregate metric but fully
@@ -302,12 +299,12 @@ improvement is attributable to difficulty ranking or merely additional epochs.
 
 \textbf{Contributions.}
 \begin{enumerate}
-  \item \textbf{PR-AUC as primary metric with statistical benchmark.}
-        We empirically demonstrate that aggregate metrics (accuracy, ROC-AUC)
-        do not surface per-threshold operating-point differences between
-        architectures, and provide per-category FP rates with \CP{}
-        95\,\% confidence intervals on 4,099 deduplicated street-level images
-        across eight fine-grained categories.
+  \item \textbf{Recall-first evaluation with per-category FP analysis.}
+        We report \PR{} as the primary metric and provide per-category FP rates
+        with \CP{} 95\,\% confidence intervals on 4,099 deduplicated street-level
+        images across eight fine-grained categories, demonstrating that aggregate
+        metrics (accuracy, ROC-AUC) do not surface per-threshold operating-point
+        differences relevant to the recall-first screening objective.
 
   \item \textbf{Phase-1 HNM pipeline with controlled ablation.}
         A three-stage offline pipeline that mines difficulty-ranked confounder
@@ -346,8 +343,7 @@ Street-level screening is complementary: it provides hyperlocal, real-time evide
 \label{sec:related:hnm}
 
 Hard negative mining has a long history: \citet{Viola2004} demonstrated bootstrapped negative mining for face detection,
-\citet{Shrivastava2016} systematised online hard example mining (OHEM), and \citet{Lin2017} introduced focal loss as a
-continuous gradient analogue.
+and \citet{Shrivastava2016} systematised online hard example mining (OHEM).
 Our approach differs in mining \emph{offline} from an \emph{intermediate} checkpoint rather than a fully converged model:
 convergence eliminates the difficulty signal, but the Phase-1 checkpoint retains genuine uncertainty on visual confounders.
 Operating at the data level enables our ablation to isolate difficulty ranking from extended training and random injection.
@@ -363,9 +359,8 @@ captures a representation state informative for mining before overfitting the tr
 \subsection{Evaluation metrics for imbalanced classification}
 \label{sec:related:metrics}
 
-\citet{Davis2006} proved that PR-AUC is more informative than ROC-AUC when the positive class is rare,
-as ROC-AUC is inflated by the large number of true negatives.
-\citet{Saito2015} empirically confirmed this in class-imbalanced screening regimes.
+\citet{Davis2006} showed that PR-AUC better reflects recall-oriented performance when the positive class is rare.
+\citet{Saito2015} empirically confirmed its advantages in class-imbalanced screening regimes.
 For per-category FP rates on small validation sets we use the exact \CP{} interval \citep{Clopper1934},
 which provides guaranteed coverage regardless of sample size---critical for the swimming pool
 category ($N{=}28$, 95\,\% CI upper bound 12.3\,\% at zero observed FPs).
@@ -470,14 +465,14 @@ at zero observed FPs (\cref{app:cp}): a null result cannot be interpreted as con
   \node[datast] (data) {\textbf{Data Sources}\\[2pt]
     \scriptsize FloodingDataset\\ RIWA rivers\\ SHA-256 dedup};
   \node[datast, right=0.3cm of data] (split) {\textbf{Split}\\[2pt]
-    \scriptsize 70/15/15\\ stratified\\ seed\,=\,42};
+    \scriptsize 80/20\\ stratified\\ seed\,=\,42};
   \node[trainst, right=0.3cm of split] (p1) {\textbf{Phase-1 Train}\\[2pt]
     \scriptsize EffNetB0/ResNet\\ top 30 trainable\\ LR\,=\,$10^{-4}$};
   \node[hnmst, right=0.3cm of p1] (conf) {\textbf{Confounder}\\\textbf{Analysis}\\[2pt]
     \scriptsize $M_1$ on train/neg\\ FP rate per cat.\\ flag if $>{>}\theta{=}5\%$};
   %% Bottom row (right to left, below top row)
   \node[hnmst, below=0.7cm of conf] (hnm) {\textbf{HNM Pipeline}\\[2pt]
-    \scriptsize rank by $\hat{p}$ from $M_1$\\ top $\pi{=}10\%$\\ $5{\times}$ augment};
+    \scriptsize rank by $\hat{p}$ from $M_1$\\ top $\pi{=}20\%$\\ $5{\times}$ augment};
   \node[trainst, left=0.3cm of hnm] (p2) {\textbf{Phase-2 Retrain}\\[2pt]
     \scriptsize from $M_2$\\ first 50 frozen\\ LR\,=\,$10^{-5}$};
   \node[evalst, left=0.3cm of p2] (ev) {\textbf{Evaluation}\\[2pt]
@@ -534,19 +529,13 @@ Full hyperparameters are listed in \cref{app:hyperparams}.
 \subsection{Loss functions}
 \label{sec:methods:loss}
 
-We evaluate BCE (Eq.~\ref{eq:bce}) and focal loss \cite{Lin2017} (Eq.~\ref{eq:focal}),
-both combined with balanced class weights.
-BCE provides global frequency correction; focal loss additionally down-weights easy examples per mini-batch.
+All models are trained with binary cross-entropy (BCE, Eq.~\ref{eq:bce}) combined with
+balanced class weights to correct for class frequency.
 \begin{equation}
   \mathcal{L}_\text{BCE} = -w_y \bigl[y \log\hat{p} + (1-y)\log(1-\hat{p})\bigr]
   \label{eq:bce}
 \end{equation}
-\begin{equation}
-  \mathcal{L}_\text{focal}
-    = -w_y \bigl(1 - p_t\bigr)^{\gamma} \bigl[y \log\hat{p} + (1-y)\log(1-\hat{p})\bigr]
-  \label{eq:focal}
-\end{equation}
-where $p_t = \hat{p}$ if $y{=}1$, $p_t = 1{-}\hat{p}$ if $y{=}0$, and $\gamma = 2.0$.
+where $w_y$ is the inverse-frequency class weight for label $y$.
 
 \subsection{Phase-1 hard negative mining}
 \label{sec:methods:hnm}
@@ -565,10 +554,10 @@ retain genuine uncertainty on visual confounders, providing the difficulty signa
 \subsubsection{Stage 2: Difficulty-ranked candidate selection}
 
 Images from flagged categories are ranked by descending Phase-1 flood probability $\hat{p}$;
-the top $\pi{=}10\,\%$ are selected.
+the top $\pi{=}20\,\%$ are selected.
 Percentile-based selection is calibration-invariant, ensuring consistent candidate set sizes
 across architectures.
-A partition-safety assertion confirms $\mathcal{X}_\text{hard}\cap\mathcal{X}_\text{val}=\emptyset$.
+A partition-safety check verifies that no selected hard negative appears in the validation set, preventing data leakage.
 
 \subsubsection{Stage 3: Augmented retraining from the Phase-2 checkpoint}
 
@@ -607,13 +596,13 @@ preserving all representation learning from the original training as a warm star
   \end{tabular}
 \end{table}
 
-HNM $>$ extended training rules out additional compute as the sole cause;
-HNM $>$ random injection isolates difficulty ranking from category exposure.
+If HNM outperforms extended training, additional compute alone cannot explain the gain;
+if HNM also outperforms random injection, difficulty ranking rather than mere category exposure is the active ingredient.
 
 \subsection{Evaluation protocol}
 \label{sec:methods:eval}
 
-\PR{} is the primary metric (motivation in \cref{sec:results:metric}).
+\PR{} is the primary metric (motivation in \cref{sec:results:baseline}).
 At $\tau{=}0.5$ we also report recall, precision, F1, accuracy, FN and FP counts.
 Per-category FP rate $r_c = k_c / n_c$ is reported with a \CP{} 95\,\% exact binomial CI:
 \begin{equation}
@@ -636,10 +625,8 @@ Pairwise comparisons use McNemar's test \cite{McNemar1947} with Bonferroni corre
 
 \Cref{tab:baseline} reports validation performance at $\tau{=}0.5$ (322 flood, 497 non-flood images).
 \EffNet{} BCE achieves 97.8\,\% flood recall (7\,FN, 7\,FP; \PR{}$=0.9976$).
-Focal loss modestly improves this to 98.5\,\% recall (5\,FN, 5\,FP; \PR{}$=0.9977$).
 \ResNet{} BCE achieves 97.2\,\% recall with only 3\,FP (\PR{}$=0.9991$, ROC-AUC$=0.9995$)---
 marginally higher discrimination metrics than \EffNet{} but 2 more missed floods at $\tau{=}0.5$.
-\ResNet{} Focal is pending re-evaluation under corrected preprocessing and is excluded.
 
 \begin{table}
   \centering
@@ -657,45 +644,10 @@ marginally higher discrimination metrics than \EffNet{} but 2 more missed floods
     \textbf{FN} & \textbf{FP} & \textbf{PR-AUC} & \textbf{ROC-AUC} \\
     \midrule
     \EffNet{}  & BCE   & 98.3 & 97.8 & 0.978 & 0.978 &  7 &  7 & 0.9976 & 0.9985 \\
-    \EffNet{}  & Focal & \textbf{98.8} & \textbf{98.5} & \textbf{0.990} & \textbf{0.985} & \textbf{5} & \textbf{5} & \textbf{0.9977} & \textbf{0.9986} \\
-    \ResNet{}  & BCE   & 98.5 & 97.2 & \textbf{0.991} & 0.981 &  9 &  3 & \textbf{0.9991} & \textbf{0.9995} \\
-    \ResNet{}  & Focal & \multicolumn{8}{c}{\textit{pending re-evaluation under corrected preprocessing}} \\
+    \ResNet{}  & BCE   & \textbf{98.5} & 97.2 & \textbf{0.991} & 0.981 &  9 &  3 & \textbf{0.9991} & \textbf{0.9995} \\
     \bottomrule
   \end{tabular}
 \end{table}
-
-\subsection{PR-AUC versus ROC-AUC: the metric matters}
-\label{sec:results:metric}
-
-\Cref{fig:prroc} shows PR and ROC curves for the two BCE baselines (Phase-1-to-Phase-2 spike visible in curves).
-Both achieve strong discrimination (\EffNet{}: PR-AUC$=0.9976$, ROC-AUC$=0.9985$;
-\ResNet{}: PR-AUC$=0.9991$, ROC-AUC$=0.9995$) yet differ by 2 missed floods at $\tau{=}0.5$.
-At fixed $\tau{=}0.5$, \EffNet{} is the recall-first choice (7\,FN vs.\ 9\,FN);
-\ResNet{}'s higher PR-AUC (0.9991) offers more precision headroom for calibrated-threshold deployment.
-Overall accuracy (98.3\,\% vs.\ 98.5\,\%) does not surface this tradeoff, confirming the
-recommendation of \citet{Davis2006} and \citet{Saito2015} to prefer \PR{}.
-
-\begin{figure}
-  \centering
-  \begin{subfigure}[b]{0.48\linewidth}
-    \includegraphics[width=\linewidth]{%
-      necessary_diagrams/03_eff_bce_pr_roc_curves}
-    \caption{\EffNet{} BCE (PR-AUC\,=\,0.9976)}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\linewidth}
-    \includegraphics[width=\linewidth]{%
-      necessary_diagrams/04_res_bce_pr_roc_curves}
-    \caption{\ResNet{} BCE (PR-AUC\,=\,0.9991)}
-  \end{subfigure}
-  \caption{Precision-recall and ROC curves for the two BCE baselines (val set, seed\,42).
-           \ResNet{} attains marginally higher PR-AUC (0.9991 vs.\ 0.9976) and
-           ROC-AUC (0.9995 vs.\ 0.9985), yet \EffNet{} achieves higher per-threshold
-           recall at $\tau{=}0.5$ (97.8\,\% vs.\ 97.2\,\%, 7\,FN vs.\ 9\,FN).
-           The Phase-1-to-Phase-2 training spike (epoch $\sim$7--8) is reflected in
-           training dynamics but not in the final validation curves shown.}
-  \label{fig:prroc}
-\end{figure}
 
 \subsection{Qualitative error analysis}
 \label{sec:results:qualitative}
@@ -731,7 +683,7 @@ FNs are flood scenes with attenuated water signal (dim lighting, partial floodin
 \subsection{Confounder analysis}
 \label{sec:results:confounder}
 
-\Cref{tab:confounder} reports per-category FP rates for both BCE baselines.
+\Cref{tab:confounder} and \cref{fig:confounder_heatmap} report per-category FP rates for both BCE baselines.
 River is the sole significant confounder: \EffNet{} BCE produces 9.2\,\% river FP rate
 (7/76, CI: [3.8, 17.7]\,\%); \ResNet{} BCE produces 3.9\,\% (3/76, CI: [0.8, 11.0]\,\%).
 All other categories produce zero FPs at $\tau{=}0.5$.
@@ -769,6 +721,17 @@ means the null result cannot be interpreted as confounder robustness.
   \end{tabular}
 \end{table}
 
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{necessary_diagrams/06_confounder_fp_heatmap}
+  \caption{Per-category false positive rate heatmap for both BCE baselines
+           (val set, seed\,42, $\tau{=}0.5$).
+           River is the only category with non-zero FPs in either architecture;
+           \EffNet{} BCE river FP rate (9.2\,\%) exceeds \ResNet{} BCE (3.9\,\%),
+           identifying it as the primary target for \PHNM{} (\cref{tab:confounder}).}
+  \label{fig:confounder_heatmap}
+\end{figure}
+
 Stage~1 of \PHNM{} therefore flags river for \EffNet{} (9.2\,\% $> \theta{=}5\,\%$) but not for \ResNet{} (3.9\,\%).
 
 \subsection{Phase-1 HNM ablation results}
@@ -777,9 +740,9 @@ Stage~1 of \PHNM{} therefore flags river for \EffNet{} (9.2\,\% $> \theta{=}5\,\
 \Cref{tab:hnm} reports ablation results; \cref{fig:fp_bar} plots river FP rates with \CP{} CIs;
 \cref{fig:hnm_ablation} shows PR/ROC curves for all four \EffNet{} conditions.
 
-The strict accuracy ordering HNM ($98.78\,\%$) $>$ extended training ($98.66\,\%$) $>$
-random injection ($98.41\,\%$) $>$ baseline ($98.29\,\%$) confirms hierarchical isolation:
-difficulty-ranked selection contributes beyond additional training and category exposure.
+Accuracy is directionally consistent across all conditions: HNM ($98.78\,\%$), extended training ($98.66\,\%$),
+random injection ($98.41\,\%$), and baseline ($98.29\,\%$); this ordering is consistent with hierarchical isolation
+of the difficulty-ranking contribution, though differences do not reach McNemar significance (see below).
 \PHNM{} simultaneously improves flood recall from 97.8\,\% to 99.1\,\% (7\,FN $\to$ 3\,FN)
 and reduces river FP from 9.2\,\% to 5.3\,\% (7/76 $\to$ 4/76)---a joint improvement that
 neither extended training (6\,FN, 5/76 river FP) nor random injection (6\,FN, 7/76) achieves.
@@ -842,9 +805,8 @@ $\approx$300 river validation images would be needed for 80\,\% power to confirm
   \end{subfigure}
   \caption{PR and ROC curves for the four \EffNet{} BCE ablation conditions
            (val set, seed\,42).
-           HNM maintains the highest PR-AUC, while the strict ordering
-           HNM $>$ extended training $>$ random injection $>$ baseline
-           holds across the full recall range.
+           HNM maintains the highest PR-AUC; accuracy decreases in the order
+           HNM, extended training, random injection, baseline across the full recall range.
            Curves from the converged Phase-2 checkpoint for each condition.}
   \label{fig:hnm_ablation}
 \end{figure}
@@ -869,23 +831,18 @@ $\approx$300 river validation images would be needed for 80\,\% power to confirm
 \label{sec:discussion}
 %%═══════════════════════════════════════════════════════════════════════════════
 
-\subsection{Why PR-AUC reveals what accuracy hides}
+\subsection{Recall-first evaluation: why per-category FP analysis matters}
 \label{sec:discussion:metric}
 
 At near-identical accuracy (98.3\,\% vs.\ 98.5\,\%) and similar PR-AUC (0.9976 vs.\ 0.9991),
 neither aggregate metric surfaces the 2-FN per-threshold difference between architectures.
-Per-category FP analysis (\cref{tab:confounder}) provides the missing diagnostic:
-\EffNet{}'s 9.2\,\% river FP rate identifies the specific weakness \PHNM{} targets.
-We recommend all flood screening evaluations report \PR{} as primary metric alongside
-per-category FP rates with \CP{} CIs; accuracy and ROC-AUC are supplementary at best.
+Per-category FP analysis (\cref{tab:confounder}) provides the operationally relevant diagnostic:
+\EffNet{}'s 9.2\,\% river FP rate identifies the specific weakness \PHNM{} targets,
+and the recall difference (7\,FN vs.\ 9\,FN) directly quantifies the cost for a recall-first deployment.
+We recommend all flood screening evaluations report \PR{} as the primary metric alongside
+per-category FP rates with \CP{} CIs, since aggregate accuracy alone does not characterise
+per-threshold operating-point behaviour on imbalanced categories.
 
-\subsection{Focal loss and architecture interaction}
-\label{sec:discussion:loss}
-
-Focal loss provides a modest consistent benefit for \EffNet{} (97.8\,\%$\to$98.5\,\% recall, 7\,FN$\to$5\,FN),
-consistent with its compound-scaled architecture benefiting from gradient reweighting.
-\ResNet{} Focal is excluded pending re-evaluation.
-Use BCE + class weights as the default; apply focal loss only once baseline recall is confirmed near-plateau.
 
 \subsection{Why Phase-1 mining works: convergence, uncertainty, and the offline HNM constraint}
 \label{sec:discussion:phase1}
@@ -894,7 +851,7 @@ The Phase-2 checkpoint assigns near-zero flood probability to all training non-f
 producing empty candidate sets; Phase-1 mining recovers the uncertainty signal before convergence suppresses it.
 The frozen early extractors retain ImageNet-calibrated features that confuse river and pool images with floods---
 exactly the candidates needed for boundary refinement.
-The strict ordering HNM $>$ extended training $>$ random injection empirically isolates this to the difficulty ranking.
+The directionally consistent ordering---HNM, then extended training, then random injection---is consistent with difficulty ranking as the active contribution, though the differences do not reach statistical significance at this validation set size.
 
 \subsection{Interpreting the HNM river FP results}
 \label{sec:discussion:fp}
@@ -924,7 +881,7 @@ For teams building street-level flood screening systems:
   \item \textbf{Report \PR{}} as the primary metric alongside per-category FP rates with \CP{} CIs ($N_\text{val}{<}100$).
   \item \textbf{Prefer \EffNet{} + \PHNM{}} at fixed $\tau{=}0.5$ for recall-first screening (99.1\,\% recall, 5.3\,\% river FP); use \ResNet{} when threshold calibration is possible.
   \item \textbf{Apply \PHNM{}} when Phase-1 river or pool FP exceeds 5\,\%; mine from $M_1$, not from the converged Phase-2 model.
-  \item \textbf{Use BCE + balanced class weights} as the default; apply focal loss only once baseline recall is near-plateau.
+  \item \textbf{Use BCE + balanced class weights} as the default loss.
   \item \textbf{Expand water-confounder validation sets} before deployment, especially swimming pools and lakes.
 \end{enumerate}
 
@@ -997,7 +954,6 @@ Source code: [TODO --- GitHub link before submission].
     Input image size                  & $224 \times 224$ \\
     Dropout rates                     & 0.2 (pre-Dense), 0.3 (post-BN) \\
     Dense hidden units                & 256 \\
-    Focal loss $\gamma$               & 2.0 \\
     Phase-1 trainable layers (top $n$)& 30 \\
     Phase-2 frozen layers (first $n$) & 50 \\
     HNM mining checkpoint             & Phase-1 best val loss \\
